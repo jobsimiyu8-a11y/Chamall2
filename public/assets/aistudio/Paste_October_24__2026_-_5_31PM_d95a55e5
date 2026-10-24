@@ -1,0 +1,887 @@
+# ALIBAIRD EATS — COMPLETE GROUP SYSTEM, MOCK DATA REMOVAL AND PRODUCT PAGE REDESIGN
+
+## PROJECT OBJECTIVE
+
+Update the existing Alibaird Eats application without rebuilding it from scratch.
+
+Implement these changes:
+
+1. Remove all mock data, fake vendors, fake products, fake users, fake groups, and demo transactions.
+2. Make the product's "Choose Your Speed" selection mandatory for every user before proceeding with a group-related purchase.
+3. Make the person who creates a group its first member and default moderator.
+4. Allow the group moderator to appoint another existing group member as a moderator.
+5. Activate a group immediately when its creator joins as member number 1.
+6. Allow other members to join and begin paying without waiting for every slot to fill.
+7. Implement the defaulted-member refund, store-credit, and replacement-slot process.
+8. Make vendor product information editable and persist changes to the database.
+9. Redesign the product-details page into a professional, internationally competitive e-commerce experience.
+10. Preserve existing authentication, user accounts, real vendor data, and functional application features.
+
+First inspect the existing codebase, database schema, authentication, product records, group logic, payment logic, and user permissions.
+
+Implement the changes using the application's existing architecture.
+
+Do not produce a static mockup. Make the actual application functional.
+
+---
+
+# PART 1: REMOVE ALL MOCK DATA
+
+## 1.1 Remove demo content across the entire application
+
+Search the complete application for mock data, including:
+
+- Hardcoded product arrays.
+- Fake vendors and stores.
+- Fake user profiles.
+- Fake group names.
+- Fake group membership.
+- Fake payment histories.
+- Simulated transaction records.
+- Placeholder announcements.
+- Fake ratings and reviews.
+- Fake discounts and previous prices.
+- Fake referral records.
+- Sample account balances.
+- Demo payment confirmations.
+- Hardcoded dashboard statistics.
+- Example product descriptions presented as real listings.
+- Placeholder data returned when database queries fail.
+- Seed records created exclusively for demonstrations.
+
+Remove all mock data from the production application.
+
+Specifically remove the fake vendor and store references to "Mumo" and "Mama Home Store" wherever they appear as demo data.
+
+The current listing examples, including "Visit Mama Home Store" and the sample furniture product, must not appear as real listings unless they correspond to genuine records belonging to a registered vendor.
+
+Do not replace one fake vendor with another fake vendor.
+
+Do not invent products, store names, member names, group records, transaction histories, or promotional offers.
+
+## 1.2 Protect genuine user data
+
+IMPORTANT:
+
+Removing mock data does not mean deleting genuine user-created information.
+
+Before removing existing records, identify whether they are demonstration records or legitimate user records.
+
+Remove only records positively identified as test, demo, or seeded sample data.
+
+Preserve genuine:
+- User accounts.
+- Vendor accounts.
+- Vendor-created listings.
+- Real groups.
+- Real membership records.
+- Legitimate transaction records.
+- Payment histories.
+- Customer balances.
+- Refund requests.
+- Uploaded product images.
+
+If a record cannot be reliably classified as mock data, do not automatically delete it. Flag it for review.
+
+Do not perform destructive database cleanup without an appropriate backup and a clear migration plan.
+
+## 1.3 Eliminate fallback mock data
+
+A missing database response must never cause the application to display invented products or fake vendors.
+
+When there are no products, show:
+
+"No products available yet."
+
+When there are no registered vendors, show:
+
+"No registered vendors yet."
+
+When there are no groups, show:
+
+"No groups available for this product yet."
+
+When the database request fails, display an appropriate error message and retry option.
+
+Do not silently replace database errors with mock records.
+
+All production listings must originate from the actual database and be subject to the application's existing access-control rules.
+
+---
+
+# PART 2: MAKE CHOOSE YOUR SPEED MANDATORY
+
+## 2.1 Mandatory speed selection
+
+Every user must choose a preferred speed for the product before proceeding with the relevant group creation, joining, or purchase workflow.
+
+Use the existing "Choose Your Speed" section.
+
+Available speed options must come from the product's actual, vendor-configured rules.
+
+Do not hardcode a universal set of group sizes or prices if the application already supports configurable options.
+
+For example, if a product genuinely supports different group sizes, display the available options with their corresponding payment amounts and schedules.
+
+Each option should clearly display:
+
+- Number of members.
+- Applicable payment amount.
+- Payment frequency.
+- Total payment amount, if applicable.
+- Expected position or allocation schedule.
+- Any relevant terms.
+
+Only show information supported by the actual product configuration.
+
+## 2.2 Enforce the selection
+
+The user must explicitly select one available speed.
+
+Before selection:
+- Disable the primary group action.
+- Display a helpful message: "Choose your speed to continue."
+- Do not allow the user to create a group.
+- Do not allow the user to join a group.
+- Do not create a group membership.
+- Do not initiate a payment.
+
+After selection:
+- Highlight the chosen option.
+- Enable the appropriate action.
+- Persist the selected speed with the group membership or group configuration, as appropriate.
+- Validate the selection again on the server.
+
+If the user changes the selection before completing the action, update the pending selection.
+
+If a user attempts to join a group using a different speed, validate compatibility with the group's configured speed.
+
+Never silently change the user's selected speed.
+
+Do not permit a user to bypass the mandatory selection by calling an API directly.
+
+## 2.3 Handle missing speed configurations
+
+If a vendor has not configured valid speed options for a product, do not invent options.
+
+Explain that the product's group options are not yet available.
+
+Prevent group creation and participation until a valid configuration exists.
+
+---
+
+# PART 3: GROUP CREATION AND MODERATOR MANAGEMENT
+
+## 3.1 The group creator automatically becomes member number 1
+
+When a user creates a group for a product:
+
+1. Verify the user is authenticated.
+2. Verify that the product is available.
+3. Verify that the user has selected a valid speed.
+4. Validate the requested group configuration.
+5. Create the group.
+6. Automatically add the creator to the group.
+7. Assign the creator member number 1.
+8. Assign the creator the moderator role.
+9. Activate the group immediately.
+10. Save all changes to the database.
+
+The creator must not need to create a group and then separately join their own group.
+
+Do not leave newly created groups in a waiting state until every slot is filled.
+
+Use a database transaction or equivalent reliable server-side operation to prevent groups from being created without their first member.
+
+If group creation fails, do not leave an incomplete group or membership record.
+
+## 3.2 Group status
+
+Support clear group statuses, including:
+
+- Active: The group has started and can accept eligible members.
+- Full: All membership slots have been allocated.
+- Completed: The group has finished its configured lifecycle.
+- Cancelled: The group has been cancelled under the applicable rules.
+
+Add other statuses only if required by the existing business logic.
+
+A group becomes active as soon as its creator joins as member number 1.
+
+A group becomes full only when all valid membership slots have been allocated.
+
+A group becomes completed only when the actual completion conditions have been satisfied.
+
+Do not confuse activation with completion.
+
+## 3.3 Member numbering
+
+Assign member numbers based on the actual order in which membership is successfully confirmed.
+
+Example:
+
+- First successful member: Member #1.
+- Second successful member: Member #2.
+- Third successful member: Member #3.
+- Continue until the configured capacity is reached.
+
+The group creator always receives member number 1.
+
+Use server-side allocation and database constraints to prevent duplicate member numbers.
+
+If two users attempt to claim the same final slot simultaneously, only one may succeed.
+
+A failed join attempt must not create a duplicate membership, charge a user incorrectly, or corrupt the group's capacity.
+
+If a slot is vacated after a default, preserve historical membership records and reassign the available slot according to the replacement policy. Do not overwrite the defaulter's history.
+
+## 3.4 Moderator permissions
+
+The group creator is the initial moderator.
+
+The moderator can:
+- View group members.
+- View membership status.
+- View relevant payment and contribution status, subject to permissions.
+- Manage group participation where authorized.
+- Invite or share the group link.
+- Appoint an existing group member as an additional moderator.
+- Remove moderator privileges where permitted.
+- Transfer the primary moderator role where the business rules allow it.
+
+A moderator appointment must target an existing, valid member of that group.
+
+The moderator must not be able to appoint a person who has not joined the group.
+
+Do not expose sensitive payment credentials or another member's private financial information.
+
+## 3.5 Additional moderators
+
+Allow the creator or an authorized moderator to appoint another member as a moderator.
+
+Before confirming the appointment:
+- Identify the selected member.
+- Explain the permissions being granted.
+- Ask for confirmation.
+
+Persist the role change in the database.
+
+Display the moderator role clearly in the member list.
+
+Keep an audit record of moderator appointments, removals, and transfers.
+
+Do not grant moderator permissions merely by hiding or showing frontend buttons. Enforce all role permissions on the server or database access-control layer.
+
+A member cannot promote themselves.
+
+Prevent unauthorized users from changing moderator roles through direct API requests.
+
+---
+
+# PART 4: GROUPS START IMMEDIATELY
+
+## 4.1 Remove the old full-group waiting rule
+
+Remove all application logic, instructions, messages, and conditions that require every membership slot to be filled before a group starts.
+
+Remove wording such as:
+
+"The group starts when every number is taken."
+
+Replace it with:
+
+"Your group starts as soon as the first member joins. Other members can join while the group is active."
+
+## 4.2 Start from member number 1
+
+The creator becomes member number 1 and activates the group immediately.
+
+The application must not wait for member number 2 or the final member.
+
+As additional members join:
+- Update the current membership count.
+- Update the available slots.
+- Show the group's current status.
+- Apply the configured payment schedule to the relevant member.
+- Update the group's progress in real time where supported.
+
+Example:
+
+A group supports 10 members.
+
+The creator opens the group and becomes member #1.
+
+The group immediately becomes active with 1 of 10 slots occupied.
+
+A second user joins and becomes member #2.
+
+The group remains active.
+
+A third user joins and becomes member #3.
+
+The group remains active.
+
+This continues until all 10 slots have been allocated.
+
+If only four members have joined, the group remains active with four occupied slots and six available slots.
+
+## 4.3 Payment scheduling
+
+Implement the existing business rules for payments without requiring a full group before payment activity can begin.
+
+A member's payment obligations must follow the actual schedule associated with the selected speed and the member's position.
+
+Do not invent a new payment amount or payment frequency.
+
+Do not assume that a user's position automatically determines their final delivery date unless that is part of the verified business rules.
+
+Display:
+- Selected speed.
+- Member number.
+- Amount due.
+- Payment frequency.
+- Next payment date, when configured.
+- Payment status.
+- Relevant group terms.
+
+Members must be able to understand their own payment obligations before confirming participation.
+
+Joining a group must not trigger an undocumented charge.
+
+If a payment provider is connected, use verified payment events to update payment status.
+
+If a payment provider is not connected, do not present simulated payments as real transactions.
+
+Clearly distinguish pending, successful, failed, refunded, and overdue payments.
+
+## 4.4 Real-time updates
+
+When a new member joins, update:
+- Occupied slots.
+- Available slots.
+- Membership count.
+- Member list, subject to privacy rules.
+- Group status.
+- Relevant moderator notifications.
+
+Use the existing real-time infrastructure if available.
+
+Otherwise, implement reliable refresh or polling behavior appropriate to the current technology stack.
+
+Do not display fabricated members to make a group appear active.
+
+---
+
+# PART 5: DEFAULTED MEMBERS, REFUNDS AND REPLACEMENT SLOTS
+
+Implement a clear, auditable default-handling process.
+
+## 5.1 Detect and record defaults
+
+A member must be considered in default only according to the configured payment rules, grace periods, and other applicable conditions.
+
+Do not mark a member as a defaulter simply because a payment is temporarily pending confirmation.
+
+Record:
+- Member ID.
+- Group ID.
+- Relevant payment obligation.
+- Amount paid.
+- Amount outstanding.
+- Default date.
+- Applicable reason or status.
+- Replacement-slot status.
+- Refund or credit status.
+
+Maintain the historical membership and payment records.
+
+## 5.2 Return the slot to the referral pool
+
+When a member's default is confirmed under the applicable rules:
+
+1. Mark the membership as defaulted.
+2. Record the relevant outstanding amount.
+3. Mark the member's slot as eligible for replacement.
+4. Return the slot to the existing referral or eligible-member pool.
+5. Allow another eligible user to claim the available slot.
+6. Update group capacity and status.
+7. Notify the relevant users.
+
+A replacement must not cause the group to exceed its configured capacity.
+
+Do not delete the original member's history.
+
+Do not automatically transfer the defaulter's personal payment obligation to another user without explicit authorization and a clearly defined business rule.
+
+The replacement member must be shown the applicable terms before joining.
+
+## 5.3 Give the defaulting member three options
+
+The user who defaulted must be able to choose from the following supported options.
+
+### Option A: Request a refund
+
+Allow the user to request a refund of eligible amounts they actually paid.
+
+Requirements:
+- Show the verified amount paid.
+- Show the eligible refundable amount.
+- Explain any applicable refund terms.
+- Let the user submit a refund request.
+- Save the request in the database.
+- Display its status.
+- Notify the user when the status changes.
+
+Possible statuses:
+- Requested.
+- Under review.
+- Approved.
+- Processing.
+- Completed.
+- Rejected.
+
+A request must not be marked completed until the refund has actually been processed and verified.
+
+Do not promise immediate refunds unless the payment provider and refund policy support them.
+
+Do not refund amounts that the user never paid.
+
+## 5.4 Option B: Retain the eligible value as store credit
+
+Allow the user to retain the eligible amount as store credit for a future purchase.
+
+Requirements:
+- Calculate the credit using verified payment records and the applicable refund policy.
+- Record the credit in a persistent ledger.
+- Show the available credit in the user's account.
+- Allow eligible future purchases to use that credit.
+- Update the balance after successful redemption.
+- Prevent duplicate credit issuance.
+- Prevent spending the same credit more than once.
+- Preserve the complete credit history.
+
+Store credit must be distinct from cash and must not be presented as a completed cash refund.
+
+Apply any expiration or usage restrictions only when supported by the published policy and applicable law.
+
+## 5.5 Option C: Apply the value to another eligible purchase
+
+Allow the user to apply the eligible amount toward another product or order of equal or greater value, subject to the configured business rules.
+
+If the new order costs more, clearly show the additional amount payable.
+
+If the new order costs less, explain how the remaining eligible balance will be handled under the applicable policy.
+
+Record the adjustment in the ledger.
+
+Do not silently remove a user's existing balance.
+
+Do not create a completed order until the purchase has been properly confirmed.
+
+## 5.6 Refund and credit integrity
+
+All refund, store-credit, and replacement-slot operations must be server-validated and auditable.
+
+Use transaction-safe processing and idempotency protection to prevent duplicate refunds or credits.
+
+Do not rely on frontend calculations as the source of truth.
+
+Do not issue a refund or credit twice because a user refreshes the page or submits a request repeatedly.
+
+Preserve the user's payment history and the group's historical records.
+
+---
+
+# PART 6: MAKE VENDOR PRODUCT INFORMATION EDITABLE
+
+All genuine product information must be editable by the authorized vendor who owns the listing.
+
+Remove the fake "Visit Mama Home Store" reference and any associated sample listing if it is not linked to a genuine registered vendor.
+
+Do not display a vendor name unless it belongs to an actual registered vendor account.
+
+## 6.1 Vendor listing editor
+
+Create or update the vendor's product management form.
+
+Authorized vendors should be able to edit:
+- Product name.
+- Product description.
+- Product category.
+- Product images.
+- Store display name, where supported by the vendor profile.
+- Product price.
+- Previous price, when genuine and applicable.
+- Discount details.
+- Availability.
+- Product attributes.
+- Delivery or collection information, where supported.
+- Group participation configuration.
+- Valid speed options.
+- Membership limits.
+- Payment schedule.
+- Product status.
+- Promotional badge eligibility.
+
+Use the existing database schema where possible.
+
+If any required field is missing, introduce a compatible database migration instead of storing the data only in browser state.
+
+## 6.2 Save changes permanently
+
+When a vendor saves a product:
+- Validate the submitted information.
+- Save the changes to the backend.
+- Confirm successful persistence.
+- Refresh the product detail page with the saved values.
+- Ensure the updated information remains after the user logs out and returns.
+- Ensure the listing displays the saved information to other authorized viewers.
+
+Show a clear success message after a successful save.
+
+If saving fails, show an error and preserve the user's unsaved form values.
+
+Do not display "Saved" before the backend confirms success.
+
+## 6.3 Vendor ownership and authorization
+
+A vendor may edit only products they own, subject to authorized administrative permissions.
+
+Verify ownership on the server or through appropriate database policies.
+
+Do not trust a product ID or vendor ID supplied by the frontend without authorization checks.
+
+An ordinary customer must not be able to modify vendor pricing, images, discounts, or group rules.
+
+Record important product changes for audit purposes.
+
+## 6.4 Remove fake product information
+
+Do not hardcode this sample information into production:
+
+"Home & Office Furniture · Mama Home Store"
+
+"5-Seater Sofa Set"
+
+"Featured New 15% off"
+
+"KSh 35,700"
+
+"KSh 42,000"
+
+"From KSh 357 a day"
+
+These values may be displayed only when they correspond to a genuine vendor-created product and valid saved pricing information.
+
+Do not invent an original price or discount to make a listing look attractive.
+
+Calculate discounts only from legitimate price fields.
+
+Display a promotional badge only when the product qualifies for it.
+
+If there are no genuine listings, show an empty state and invite registered vendors to create listings.
+
+---
+
+# PART 7: PROFESSIONALLY REDESIGN THE PRODUCT-DETAILS PAGE
+
+Redesign the attached product-details page using the visual principles of AliExpress and other established international e-commerce marketplaces.
+
+Do not copy another marketplace's branding.
+
+Use Alibaird Eats' own brand identity.
+
+Use:
+- Inter or Roboto typography.
+- White content surfaces.
+- Light neutral page backgrounds.
+- Dark readable text.
+- Consistent green brand accents.
+- Orange primary action buttons.
+- Restrained discount badges.
+- Professional product cards.
+- Consistent spacing and alignment.
+
+## 7.1 Main page layout
+
+At desktop width, create a clean two-column product-details layout.
+
+LEFT COLUMN: Approximately 55–60%.
+
+Display:
+- Large primary product image.
+- Thumbnail gallery underneath.
+- Image navigation controls when multiple images exist.
+- Optional image zoom.
+- Product image loading states.
+- Product description below the gallery.
+
+RIGHT COLUMN: Approximately 40–45%.
+
+Display:
+- Breadcrumb navigation.
+- Product title.
+- Genuine vendor/store information.
+- Current price.
+- Valid previous price and discount, if applicable.
+- Availability.
+- Mandatory "Choose Your Speed" section.
+- Selected speed summary.
+- Group creation or joining action.
+- Clear payment and group terms.
+
+Use a centered content container with consistent margins.
+
+The gallery and purchase panel should align at the top.
+
+Avoid large empty spaces, tiny text, and unnecessarily narrow content areas.
+
+## 7.2 Product gallery
+
+Use actual vendor-uploaded product images.
+
+The primary image must be large, clear, and proportionate.
+
+Display additional thumbnails beneath the main image when multiple images exist.
+
+Clicking a thumbnail should update the primary image.
+
+If no product images exist, display a neutral, attractive empty state.
+
+Do not use a shopping-bag icon as if it were the actual photograph of a product.
+
+Do not generate or fabricate product photographs to fill missing database records.
+
+Show an image count or gallery controls only when supported by the available images.
+
+## 7.3 Product title and vendor information
+
+Display the product title in a readable heading.
+
+Place the actual registered vendor's name beneath or beside it.
+
+Link to the vendor's store only if the vendor has a valid, published store profile.
+
+Do not display fabricated store names or links.
+
+If the vendor has not configured a public store page, omit the link or show only the legitimate vendor display name.
+
+## 7.4 Price presentation
+
+Make the current price prominent.
+
+Example formatting:
+
+KSh 7,800
+
+If a valid previous price exists, display it with a restrained strikethrough and the actual calculated discount.
+
+Keep payment schedule information separate from the full product price.
+
+If daily payment information is supported, display it beneath the primary price with an explanation of the payment arrangement.
+
+Do not present a daily installment as the full price.
+
+## 7.5 Choose Your Speed section
+
+Make this section a clean, easy-to-scan selection panel.
+
+Each available speed option should display:
+- A radio button.
+- Number of members.
+- Applicable amount.
+- Payment frequency.
+- Relevant schedule or position information.
+
+Use a clear selected state with a subtle green border or background.
+
+Make the entire option card clickable.
+
+Do not compress the options into tiny rows.
+
+Ensure that prices and schedules remain readable on desktop and mobile.
+
+Use only actual configured options from the database.
+
+Require an explicit selection before allowing the user to continue.
+
+## 7.6 Group creation panel
+
+Below the speed selector, provide a clearly separated group action panel.
+
+When no speed has been selected:
+
+"Choose your speed to continue."
+
+After a valid selection:
+
+"Start your own Chama"
+
+The primary button should create a group and automatically enroll the creator as member #1.
+
+Show supporting information:
+
+"Your group starts immediately. Other members can join as slots become available."
+
+Preserve the existing valid business rules about payments and group participation.
+
+Do not state that all members must join before the group starts.
+
+## 7.7 Groups for this item
+
+Move the available groups into a dedicated section below the main product and purchase information.
+
+Use a professional responsive card grid.
+
+Each genuine group card should display:
+- Actual group name.
+- Group moderator or creator, where appropriate.
+- Configured speed.
+- Occupied slots and total capacity.
+- Available slots.
+- Current group status.
+- Relevant payment amount.
+- A "Join Group" action.
+
+Example structure:
+
+Group name
+10-member speed
+4 of 10 members
+6 slots available
+Active
+Applicable payment amount
+Join Group
+
+The example is for layout only. Do not seed the application with these values.
+
+Show only real groups returned from the database.
+
+If no groups exist, show:
+
+"No active groups yet. Start a group and become member #1."
+
+Provide a clear action to create a group, subject to the mandatory speed-selection rule.
+
+A group must become active immediately when its creator joins.
+
+## 7.8 Mobile layout
+
+On mobile:
+- Stack the product gallery above the product information.
+- Keep the product title and price readable.
+- Use full-width speed-selection cards.
+- Prevent horizontal overflow.
+- Make buttons touch-friendly.
+- Keep membership and payment information easy to scan.
+- Stack group cards in a single column when needed.
+
+If a sticky bottom action bar is added, ensure it does not obscure the speed selector, form fields, or page content.
+
+---
+
+# PART 8: DATABASE AND BACKEND REQUIREMENTS
+
+Inspect the existing schema before adding new tables.
+
+Reuse existing structures wherever possible.
+
+Implement or adapt the data model to support:
+
+- Real registered vendors.
+- Vendor-owned products.
+- Product images.
+- Product-specific speed configurations.
+- Groups.
+- Group membership.
+- Member numbering.
+- Moderator roles.
+- Payment obligations.
+- Verified payment records.
+- Default records.
+- Replacement-slot availability.
+- Refund requests.
+- Store-credit ledger entries.
+- Purchase adjustments.
+- Audit records.
+
+Enforce appropriate database relationships and uniqueness constraints.
+
+At minimum:
+- A member cannot have duplicate membership in the same group.
+- A group cannot exceed its configured capacity.
+- A member number cannot be assigned twice within the same group.
+- A user cannot appoint themselves as moderator.
+- A vendor cannot edit another vendor's listing without authorized privileges.
+- A refund cannot exceed the eligible amount actually paid.
+- A credit entry cannot be issued twice for the same underlying event.
+- A group cannot be created without its first member.
+- An invalid speed cannot be used to create or join a group.
+
+Use appropriate transactions, authorization checks, and database policies.
+
+If the application uses Supabase, review Row Level Security policies before changing any data-access logic.
+
+Do not expose service-role credentials or secret API keys in the frontend.
+
+Do not make sensitive database tables publicly writable.
+
+---
+
+# PART 9: FINAL TESTING REQUIREMENTS
+
+Test the actual implementation with real application flows.
+
+### Group creation
+- An authenticated user selects a speed.
+- The user creates a group.
+- The creator becomes member #1 and moderator.
+- The group becomes active immediately.
+- The group and membership are persisted in the database.
+
+### Group joining
+- Another eligible user joins.
+- The new user receives the next available member number.
+- The occupied and available slot counts update.
+- The group remains active.
+
+### Moderator management
+- The moderator appoints an existing member.
+- The new moderator receives the correct permissions.
+- Unauthorized users cannot modify moderator roles.
+
+### Mandatory speed selection
+- A user cannot create or join a group without selecting a speed.
+- Invalid speed selections are rejected on the server.
+- The selection persists correctly.
+
+### Default handling
+- A confirmed default is recorded.
+- The vacated slot becomes available for replacement.
+- The original membership history remains intact.
+- The user can request an eligible refund or choose an eligible credit option.
+- Refunds and credits cannot be duplicated.
+
+### Vendor editing
+- An authorized vendor edits a product.
+- Changes are saved to the backend.
+- Updated information appears on the product-details page.
+- Unauthorized users cannot edit the listing.
+
+### Mock data removal
+- Search the application for "Mumo" and "Mama Home Store".
+- Confirm that demo references are removed unless backed by genuine vendor records.
+- Confirm that fake groups, products, and users are no longer displayed.
+- Confirm that empty states work correctly.
+- Confirm that genuine user records remain intact.
+
+### Responsive design
+- Test the product page on desktop, tablet, and mobile.
+- Confirm that product images, speed options, prices, group cards, and buttons remain readable.
+- Check that no horizontal overflow or broken layouts remain.
+
+FINAL REQUIREMENT:
+
+Implement the actual code and backend changes. Do not stop after generating a design concept, checklist, or static screenshot.
+
+Preserve the existing working application, remove mock data safely, implement the new group rules, and deliver a professional, production-oriented Alibaird Eats experience.

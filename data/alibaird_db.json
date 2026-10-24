@@ -1,0 +1,671 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Alibaird System Admin",
+      "phone": "0700000000",
+      "email": "admin@alibaird.com",
+      "role": "admin",
+      "credit": 0,
+      "coins": 200,
+      "points": 500,
+      "lastActive": 1792853094021,
+      "createdAt": 1790261094021
+    },
+    {
+      "id": 2,
+      "name": "Alibaird Direct Electronics & Home",
+      "phone": "0722000000",
+      "email": "direct@alibaird.com",
+      "role": "merchant",
+      "shopName": "Alibaird Direct Official",
+      "shopDescription": "Official verified distributor of solar generators, appliances & smart electronics.",
+      "verified": true,
+      "credit": 0,
+      "coins": 100,
+      "points": 250,
+      "lastActive": 1792853094021,
+      "createdAt": 1791125094021
+    },
+    {
+      "id": 3,
+      "name": "Samuel Mwangi",
+      "phone": "0712345678",
+      "role": "buyer",
+      "credit": 0,
+      "coins": 50,
+      "points": 120,
+      "lastActive": 1792853094021,
+      "createdAt": 1791989094021
+    },
+    {
+      "id": 4,
+      "name": "Faith Chebet",
+      "phone": "0723456789",
+      "role": "buyer",
+      "credit": 2040,
+      "coins": 40,
+      "points": 80,
+      "lastActive": 1792853094021,
+      "createdAt": 1792161894021
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "title": "EcoFlow Portable Solar Power Station (1024Wh / 1800W)",
+      "description": "Heavy duty portable solar power backup generator with ultra-fast AC charging, dual PD 100W USB-C ports, and intelligent LCD battery monitor. Ideal for home outages, off-grid appliances, and emergency power.",
+      "category": "Appliances",
+      "price": 68000,
+      "wasPrice": 78000,
+      "discountPercent": 13,
+      "images": [
+        "/src/assets/images/solar_power_backup_station_1792852473757.jpg"
+      ],
+      "vendorId": 2,
+      "vendorName": "Alibaird Direct Official",
+      "isFeatured": true,
+      "live": true,
+      "moderationStatus": "approved",
+      "stockQuantity": 15,
+      "attributes": {
+        "Capacity": "1024Wh LiFePO4",
+        "Output": "1800W Pure Sine Wave",
+        "Cycles": "3,000+ Cycles to 80%",
+        "Warranty": "2 Years Manufacturer"
+      },
+      "speedOptions": [
+        {
+          "size": 10,
+          "cycleDays": 10,
+          "dailyAmount": 680,
+          "totalAmount": 68000,
+          "description": "10 members · KSh 680 daily · Delivery rotation every 10 days"
+        },
+        {
+          "size": 6,
+          "cycleDays": 10,
+          "dailyAmount": 1134,
+          "totalAmount": 68000,
+          "description": "6 members · KSh 1,134 daily · Accelerated 60-day cycle"
+        },
+        {
+          "size": 4,
+          "cycleDays": 10,
+          "dailyAmount": 1700,
+          "totalAmount": 68000,
+          "description": "4 members · KSh 1,700 daily · Express 40-day delivery"
+        },
+        {
+          "size": 2,
+          "cycleDays": 10,
+          "dailyAmount": 3400,
+          "totalAmount": 68000,
+          "description": "2 members · KSh 3,400 daily · Fast-track 20-day duo"
+        }
+      ],
+      "createdAt": 1792421094021,
+      "updatedAt": 1792421094021
+    },
+    {
+      "id": 2,
+      "title": "Culinary Pro 10-Piece Stainless Steel Tri-Ply Cookware Set (Induction Ready)",
+      "description": "Professional grade surgical stainless steel with impact-bonded aluminum core for even heat distribution. Suitable for induction, gas, and electric stovetops. Oven safe to 260°C.",
+      "category": "Kitchen",
+      "price": 14900,
+      "wasPrice": 17500,
+      "discountPercent": 15,
+      "images": [
+        "/src/assets/images/stainless_cookware_set_1792852473733.jpg"
+      ],
+      "vendorId": 2,
+      "vendorName": "Alibaird Direct Official",
+      "isFeatured": true,
+      "live": true,
+      "moderationStatus": "approved",
+      "stockQuantity": 28,
+      "attributes": {
+        "Material": "18/10 Stainless Steel",
+        "Pieces": "10 Pcs with Tempered Lids",
+        "Compatibility": "Induction / Gas / Ceramic",
+        "Cleaning": "Dishwasher Safe"
+      },
+      "speedOptions": [
+        {
+          "size": 10,
+          "cycleDays": 10,
+          "dailyAmount": 145,
+          "totalAmount": 14500,
+          "description": "10 members · KSh 145 daily · One set delivered every 10 days"
+        },
+        {
+          "size": 6,
+          "cycleDays": 10,
+          "dailyAmount": 242,
+          "totalAmount": 14500,
+          "description": "6 members · KSh 242 daily · Completed in 60 days"
+        },
+        {
+          "size": 4,
+          "cycleDays": 10,
+          "dailyAmount": 363,
+          "totalAmount": 14500,
+          "description": "4 members · KSh 363 daily · Completed in 40 days"
+        },
+        {
+          "size": 2,
+          "cycleDays": 10,
+          "dailyAmount": 725,
+          "totalAmount": 14500,
+          "description": "2 members · KSh 725 daily · Completed in 20 days"
+        }
+      ],
+      "createdAt": 1792507494021,
+      "updatedAt": 1792853117377
+    },
+    {
+      "id": 3,
+      "title": "Titanium 55-Inch 4K UHD Bezel-Less Smart LED TV",
+      "description": "Cinema-grade 4K resolution with Quantum Color HDR10+, Dolby Audio spatial sound, built-in dual band Wi-Fi, and Google TV operating system with Netflix and YouTube pre-installed.",
+      "category": "Phones, Tablets & TV",
+      "price": 46000,
+      "wasPrice": 52000,
+      "discountPercent": 12,
+      "images": [
+        "/src/assets/images/smart_uhd_television_1792852474781.jpg"
+      ],
+      "vendorId": 2,
+      "vendorName": "Alibaird Direct Official",
+      "isFeatured": true,
+      "live": true,
+      "moderationStatus": "approved",
+      "stockQuantity": 12,
+      "attributes": {
+        "Screen": "55\" 4K UHD Bezel-Less",
+        "HDR": "HDR10+ & HLG",
+        "Audio": "24W Dolby Atmos Stereo",
+        "OS": "Google TV Licensed"
+      },
+      "speedOptions": [
+        {
+          "size": 10,
+          "cycleDays": 10,
+          "dailyAmount": 460,
+          "totalAmount": 46000,
+          "description": "10 members · KSh 460 daily · Allocation every 10 days"
+        },
+        {
+          "size": 6,
+          "cycleDays": 10,
+          "dailyAmount": 767,
+          "totalAmount": 46000,
+          "description": "6 members · KSh 767 daily · 60-day fulfillment"
+        },
+        {
+          "size": 4,
+          "cycleDays": 10,
+          "dailyAmount": 1150,
+          "totalAmount": 46000,
+          "description": "4 members · KSh 1,150 daily · 40-day fulfillment"
+        },
+        {
+          "size": 2,
+          "cycleDays": 10,
+          "dailyAmount": 2300,
+          "totalAmount": 46000,
+          "description": "2 members · KSh 2,300 daily · 20-day duo speed"
+        }
+      ],
+      "createdAt": 1792593894021,
+      "updatedAt": 1792593894021
+    },
+    {
+      "id": 4,
+      "title": "ErgoMatrix Aeroflex High-Back Mesh Executive Office Chair",
+      "description": "Orthopedic dynamic lumbar support with breathable Korean mesh, 3D adjustable armrests, synchronized tilt mechanism, and heavy-duty polished aluminum chassis.",
+      "category": "Home & Office Furniture",
+      "price": 24000,
+      "wasPrice": 28500,
+      "discountPercent": 16,
+      "images": [
+        "/src/assets/images/executive_ergonomic_chair_1792852475009.jpg"
+      ],
+      "vendorId": 2,
+      "vendorName": "Alibaird Direct Official",
+      "isFeatured": false,
+      "live": true,
+      "moderationStatus": "approved",
+      "stockQuantity": 20,
+      "attributes": {
+        "Support": "Self-adjusting Lumbar",
+        "GasLift": "Class 4 TÜV Certified",
+        "Base": "Polished Cast Aluminum",
+        "Warranty": "3 Years Comprehensive"
+      },
+      "speedOptions": [
+        {
+          "size": 10,
+          "cycleDays": 10,
+          "dailyAmount": 240,
+          "totalAmount": 24000,
+          "description": "10 members · KSh 240 daily · 1 chair allocated every 10 days"
+        },
+        {
+          "size": 6,
+          "cycleDays": 10,
+          "dailyAmount": 400,
+          "totalAmount": 24000,
+          "description": "6 members · KSh 400 daily · 60 days total"
+        },
+        {
+          "size": 4,
+          "cycleDays": 10,
+          "dailyAmount": 600,
+          "totalAmount": 24000,
+          "description": "4 members · KSh 600 daily · 40 days total"
+        },
+        {
+          "size": 2,
+          "cycleDays": 10,
+          "dailyAmount": 1200,
+          "totalAmount": 24000,
+          "description": "2 members · KSh 1,200 daily · 20 days duo"
+        }
+      ],
+      "createdAt": 1792680294021,
+      "updatedAt": 1792680294021
+    }
+  ],
+  "groups": [
+    {
+      "id": 200,
+      "productId": 2,
+      "productTitle": "Culinary Pro 10-Piece Stainless Steel Tri-Ply Cookware Set",
+      "productPrice": 14500,
+      "productImage": "/src/assets/images/stainless_cookware_set_1792852473733.jpg",
+      "name": "Samuel Cookware Fast Track",
+      "size": 6,
+      "adminId": 3,
+      "moderators": [
+        3
+      ],
+      "status": "active",
+      "inviteCode": "JPVNMM",
+      "dailyAmount": 242,
+      "cycleDays": 10,
+      "slots": [
+        {
+          "slotNumber": 1,
+          "userId": 3,
+          "userName": "Samuel Mwangi",
+          "userPhone": "0712345678",
+          "status": "active",
+          "inviteCode": "JPVNMM",
+          "paidAmount": 0,
+          "targetAmount": 14500,
+          "joinedAt": 1792853110513
+        },
+        {
+          "slotNumber": 2,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "K4SVES",
+          "paidAmount": 0,
+          "targetAmount": 14500
+        },
+        {
+          "slotNumber": 3,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "V4WVJ5",
+          "paidAmount": 0,
+          "targetAmount": 14500
+        },
+        {
+          "slotNumber": 4,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "9BE84Z",
+          "paidAmount": 0,
+          "targetAmount": 14500
+        },
+        {
+          "slotNumber": 5,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "XXY74A",
+          "paidAmount": 0,
+          "targetAmount": 14500
+        },
+        {
+          "slotNumber": 6,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "REE58K",
+          "paidAmount": 0,
+          "targetAmount": 14500
+        }
+      ],
+      "occupiedCount": 1,
+      "availableCount": 5,
+      "chat": [
+        {
+          "id": "chat_1792853110513",
+          "senderId": 3,
+          "senderName": "Samuel Mwangi",
+          "kind": "system",
+          "text": "Chama group started! Samuel Mwangi is Member #1 and moderator. Group is active immediately.",
+          "timestamp": 1792853110513
+        }
+      ],
+      "createdAt": 1792853110513
+    },
+    {
+      "id": 101,
+      "productId": 1,
+      "productTitle": "EcoFlow Portable Solar Power Station (1024Wh / 1800W)",
+      "productPrice": 68000,
+      "productImage": "/src/assets/images/solar_power_backup_station_1792852473757.jpg",
+      "name": "Mwangi Solar Chama",
+      "size": 10,
+      "adminId": 3,
+      "moderators": [
+        3,
+        4
+      ],
+      "status": "active",
+      "inviteCode": "SOLAR9X1",
+      "dailyAmount": 680,
+      "cycleDays": 10,
+      "slots": [
+        {
+          "slotNumber": 1,
+          "userId": 3,
+          "userName": "Samuel Mwangi",
+          "userPhone": "0712345678",
+          "status": "active",
+          "inviteCode": "SOLAR9X1",
+          "paidAmount": 6800,
+          "targetAmount": 68000,
+          "lastPaymentDate": 1792766694021,
+          "joinedAt": 1792680294021
+        },
+        {
+          "slotNumber": 2,
+          "userId": 1,
+          "userName": "Alibaird System Admin",
+          "userPhone": "0700000000",
+          "status": "active",
+          "inviteCode": "N7SG96",
+          "paidAmount": 0,
+          "targetAmount": 68000,
+          "lastPaymentDate": 1792766694021,
+          "joinedAt": 1792853160087,
+          "isDefaulter": false
+        },
+        {
+          "slotNumber": 3,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "H4JJXV",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 4,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "FSWD79",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 5,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "YWXCNW",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 6,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "JUCWS6",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 7,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "E6ACGW",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 8,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "SSPUN2",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 9,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "YM3HTP",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        },
+        {
+          "slotNumber": 10,
+          "userId": null,
+          "userName": null,
+          "status": "open",
+          "inviteCode": "8LXVF9",
+          "paidAmount": 0,
+          "targetAmount": 68000
+        }
+      ],
+      "occupiedCount": 2,
+      "availableCount": 8,
+      "chat": [
+        {
+          "id": "m1",
+          "senderId": 3,
+          "senderName": "Samuel Mwangi",
+          "kind": "system",
+          "text": "Chama started! Member #1 joined and is ready for Day 10.",
+          "timestamp": 1792680294021
+        },
+        {
+          "id": "m2",
+          "senderId": 4,
+          "senderName": "Faith Chebet",
+          "kind": "normal",
+          "text": "Joined as Member #2! Excited for this solar station.",
+          "timestamp": 1792766694021
+        },
+        {
+          "id": "chat_1792853130042",
+          "senderId": 3,
+          "senderName": "Samuel Mwangi",
+          "kind": "system",
+          "text": "Faith Chebet has been appointed as a Group Moderator by Samuel Mwangi.",
+          "timestamp": 1792853130042
+        },
+        {
+          "id": "chat_1792853136662",
+          "senderId": 3,
+          "senderName": "Samuel Mwangi",
+          "kind": "system",
+          "text": "Slot #2 has been vacated and returned to the pool for replacement. Eligible for another buyer to join.",
+          "timestamp": 1792853136662
+        },
+        {
+          "id": "chat_1792853160087",
+          "senderId": 1,
+          "senderName": "Alibaird System Admin",
+          "kind": "system",
+          "text": "Alibaird System Admin joined as Member #2!",
+          "timestamp": 1792853160087
+        }
+      ],
+      "createdAt": 1792680294021
+    }
+  ],
+  "defaultRecords": [
+    {
+      "id": 1,
+      "userId": 4,
+      "userName": "Faith Chebet",
+      "groupId": 101,
+      "groupName": "Mwangi Solar Chama",
+      "slotNumber": 2,
+      "productTitle": "EcoFlow Portable Solar Power Station (1024Wh / 1800W)",
+      "totalObligation": 68000,
+      "amountPaid": 2040,
+      "amountOutstanding": 65960,
+      "defaultDate": 1792853136662,
+      "reason": "Missed contribution past grace period",
+      "replacementStatus": "available",
+      "resolutionStatus": "completed",
+      "resolutionOption": "store_credit"
+    }
+  ],
+  "refundRequests": [],
+  "payments": [
+    {
+      "id": 1,
+      "type": "group_installment",
+      "userId": 3,
+      "userName": "Samuel Mwangi",
+      "code": "QJK4X8L2PA",
+      "amount": 6800,
+      "groupId": 101,
+      "groupName": "Mwangi Solar Chama",
+      "slotNumber": 1,
+      "productId": 1,
+      "status": "approved",
+      "createdAt": 1792766694021,
+      "approvedAt": 1792766694021
+    },
+    {
+      "id": 2,
+      "type": "group_installment",
+      "userId": 4,
+      "userName": "Faith Chebet",
+      "code": "RFM9B3V5KT",
+      "amount": 2040,
+      "groupId": 101,
+      "groupName": "Mwangi Solar Chama",
+      "slotNumber": 2,
+      "productId": 1,
+      "status": "approved",
+      "createdAt": 1792766694021,
+      "approvedAt": 1792766694021
+    }
+  ],
+  "storeCreditLedger": [
+    {
+      "id": 1,
+      "userId": 4,
+      "amount": 2040,
+      "balanceAfter": 2040,
+      "type": "default_conversion",
+      "referenceId": "DEF_1",
+      "note": "Converted defaulted Chama #101 payment to store credit",
+      "createdAt": 1792853147312
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": 15,
+      "timestamp": 1792853160087,
+      "actorId": 1,
+      "actorName": "Alibaird System Admin",
+      "action": "MEMBER_JOINED",
+      "details": "Joined Chama #101 as Member #2"
+    },
+    {
+      "id": 14,
+      "timestamp": 1792853147312,
+      "actorId": 4,
+      "actorName": "Faith Chebet",
+      "action": "STORE_CREDIT_ISSUED",
+      "details": "Converted KSh 2040 into store credit. New balance: KSh 2040"
+    },
+    {
+      "id": 13,
+      "timestamp": 1792853136662,
+      "actorId": 3,
+      "actorName": "Samuel Mwangi",
+      "action": "MEMBER_DEFAULTED",
+      "details": "Marked Member #2 (Faith Chebet) as defaulted in Chama #101. Paid: KSh 2040. Slot returned to replacement pool."
+    },
+    {
+      "id": 12,
+      "timestamp": 1792853130042,
+      "actorId": 3,
+      "actorName": "Samuel Mwangi",
+      "action": "MODERATOR_APPOINTED",
+      "details": "Appointed Faith Chebet as co-moderator in Chama #101"
+    },
+    {
+      "id": 11,
+      "timestamp": 1792853117377,
+      "actorId": 2,
+      "actorName": "Alibaird Direct Electronics & Home",
+      "action": "PRODUCT_UPDATED",
+      "details": "Updated product #2 \"Culinary Pro 10-Piece Stainless Steel Tri-Ply Cookware Set (Induction Ready)\""
+    },
+    {
+      "id": 10,
+      "timestamp": 1792853110513,
+      "actorId": 3,
+      "actorName": "Samuel Mwangi",
+      "action": "GROUP_CREATED",
+      "details": "Created Chama #200 for \"Culinary Pro 10-Piece Stainless Steel Tri-Ply Cookware Set\" (6 members). Creator became Member #1 and moderator. Group activated immediately."
+    },
+    {
+      "id": 1,
+      "timestamp": 1792680294021,
+      "actorId": 3,
+      "actorName": "Samuel Mwangi",
+      "action": "GROUP_CREATED",
+      "details": "Created Chama group #101 with 10 members. Joined as Member #1 and initial moderator. Group activated immediately."
+    },
+    {
+      "id": 2,
+      "timestamp": 1792766694021,
+      "actorId": 4,
+      "actorName": "Faith Chebet",
+      "action": "MEMBER_JOINED",
+      "details": "Joined Chama group #101 as Member #2."
+    }
+  ],
+  "nextIds": {
+    "user": 10,
+    "product": 20,
+    "group": 201,
+    "defaultRecord": 2,
+    "refundRequest": 1,
+    "payment": 10,
+    "ledger": 2,
+    "audit": 16
+  }
+}

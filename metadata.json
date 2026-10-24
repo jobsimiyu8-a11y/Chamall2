@@ -1,0 +1,6 @@
+{
+  "name": "Alibaird - Social Fintech Chama Marketplace",
+  "description": "Next-generation social fintech e-commerce platform with Chama group savings, immediate group activation, moderator controls, and secure ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
