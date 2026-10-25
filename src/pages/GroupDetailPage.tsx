@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChamaGroup, User, GroupSlot } from '../types.ts';
-import { api } from '../api.ts';
+import { ChamaGroup, User, GroupSlot, Product, PeerLoanRequest, MemberStatement } from '../types.ts';
+import { api, resolveImageUrl } from '../api.ts';
 import {
   Users,
   Shield,
@@ -11,10 +11,19 @@ import {
   AlertTriangle,
   UserPlus,
   CheckCircle,
+  CheckCircle2,
   Clock,
   Sparkles,
   Info,
   RefreshCw,
+  Store,
+  ArrowRight,
+  FileText,
+  HandCoins,
+  X,
+  Printer,
+  Wallet,
+  Check,
 } from 'lucide-react';
 
 interface GroupDetailPageProps {
@@ -33,6 +42,8 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
   onNotify,
 }) => {
   const [group, setGroup] = useState<ChamaGroup | null>(null);
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  const [loans, setLoans] = useState<PeerLoanRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +51,7 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
   const [mpesaCode, setMpesaCode] = useState('');
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [payingFromWallet, setPayingFromWallet] = useState(false);
 
   // Chat message state
   const [chatInput, setChatInput] = useState('');
@@ -51,6 +63,21 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
   const [defaultReason, setDefaultReason] = useState('Missed scheduled Chama contribution');
   const [submittingModAction, setSubmittingModAction] = useState(false);
 
+  // Peer-to-Peer Loan state
+  const [showLoanModal, setShowLoanModal] = useState(false);
+  const [loanRequestAmount, setLoanRequestAmount] = useState<number>(0);
+  const [loanRequestPurpose, setLoanRequestPurpose] = useState('');
+  const [submittingLoanRequest, setSubmittingLoanRequest] = useState(false);
+
+  const [selectedLoanToFund, setSelectedLoanToFund] = useState<PeerLoanRequest | null>(null);
+  const [lenderAgreedTerms, setLenderAgreedTerms] = useState(false);
+  const [submittingFund, setSubmittingFund] = useState(false);
+
+  // Member Financial Statement Modal state
+  const [selectedStatementMember, setSelectedStatementMember] = useState<{ id: number; name: string } | null>(null);
+  const [statementData, setStatementData] = useState<MemberStatement | null>(null);
+  const [loadingStatement, setLoadingStatement] = useState(false);
+
   useEffect(() => {
     loadGroup();
   }, [groupId]);
@@ -59,11 +86,22 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getGroup(groupId);
+      const [data, prodsRes, loansRes] = await Promise.all([
+        api.getGroup(groupId),
+        api.getProducts(),
+        api.getGroupLoans(groupId).catch(() => ({ loans: [] })),
+      ]);
       setGroup(data.group);
+      setLoans(loansRes.loans || []);
       if (data.group && !paymentAmount) {
         setPaymentAmount(data.group.dailyAmount);
       }
+
+      // Filter products from other items/merchants (guaranteeing at least 5 recommendations)
+      const others = prodsRes.products.filter(
+        (p: Product) => p.id !== data.group?.productId
+      );
+      setRecommendedProducts(others);
     } catch (err: any) {
       setError(err.message || 'Failed to load group details.');
     } finally {
@@ -75,6 +113,111 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
   const mySlot = currentUser && group
     ? group.slots.find(s => s.userId === currentUser.id && s.status === 'active')
     : null;
+
+  // Pay slot directly using wallet credit balance (from loan or store credit)
+  async function handlePayFromWallet() {
+    if (!currentUser || !mySlot || !group) return;
+    const amountToPay = Math.min(paymentAmount || group.dailyAmount, currentUser.credit || 0);
+    if (amountToPay <= 0) {
+      onNotify('error', 'You do not have sufficient wallet balance to pay.');
+      return;
+    }
+
+    setPayingFromWallet(true);
+    try {
+      const res = await api.paySlotFromWallet(group.id, {
+        slotNumber: mySlot.slotNumber,
+        amount: amountToPay,
+      });
+      currentUser.credit = res.walletBalance;
+      setGroup(res.group);
+      onNotify('success', res.message);
+      loadGroup();
+    } catch (err: any) {
+      onNotify('error', err.message || 'Failed to pay from wallet');
+    } finally {
+      setPayingFromWallet(false);
+    }
+  }
+
+  // Submit Peer Loan Request
+  async function handleRequestPeerLoan(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentUser || !mySlot || !group) return;
+    if (loanRequestAmount <= 0) {
+      onNotify('error', 'Please enter a valid loan amount.');
+      return;
+    }
+
+    setSubmittingLoanRequest(true);
+    try {
+      const res = await api.requestPeerLoan(group.id, {
+        amount: Number(loanRequestAmount),
+        purpose: loanRequestPurpose.trim() || `Chama Slot #${mySlot.slotNumber} installment support`,
+      });
+      onNotify('success', res.message);
+      setShowLoanModal(false);
+      setLoanRequestAmount(0);
+      setLoanRequestPurpose('');
+      loadGroup();
+    } catch (err: any) {
+      onNotify('error', err.message || 'Failed to submit loan request');
+    } finally {
+      setSubmittingLoanRequest(false);
+    }
+  }
+
+  // 3rd-Party Lender Funds Member Wallet directly
+  async function handleConfirmFundLoan() {
+    if (!currentUser || !selectedLoanToFund || !group) return;
+    if (!lenderAgreedTerms) {
+      onNotify('error', 'Please confirm that loan terms and repayments are handled manually outside the platform.');
+      return;
+    }
+
+    setSubmittingFund(true);
+    try {
+      const res = await api.fundPeerLoan(group.id, selectedLoanToFund.id);
+      onNotify('success', res.message);
+      setSelectedLoanToFund(null);
+      setLenderAgreedTerms(false);
+      loadGroup();
+    } catch (err: any) {
+      onNotify('error', err.message || 'Failed to fund member wallet');
+    } finally {
+      setSubmittingFund(false);
+    }
+  }
+
+  // Moderator notifies 3rd party lenders
+  async function handleNotifyLenders() {
+    if (!currentUser || !group) return;
+    try {
+      await api.sendGroupChat(group.id, {
+        kind: 'system',
+        text: `🔔 MODERATOR NOTICE: Chama members are seeking optional peer-to-peer installment loans. 3rd-party lenders in this group can review open loan requests below and fund member wallets directly (1% Buyoll escrow fee applies). Repayments are arranged outside the platform.`,
+      });
+      onNotify('success', 'Notification alert sent to group chat and 3rd-party lenders.');
+      loadGroup();
+    } catch (err: any) {
+      onNotify('error', err.message || 'Failed to send alert');
+    }
+  }
+
+  // Open Member Statement Modal
+  async function handleOpenStatement(member: { id: number; name: string }) {
+    setSelectedStatementMember(member);
+    setLoadingStatement(true);
+    setStatementData(null);
+    try {
+      const res = await api.getMemberStatement(member.id);
+      setStatementData(res.statement);
+    } catch (err: any) {
+      onNotify('error', err.message || 'Failed to load member statement');
+    } finally {
+      setLoadingStatement(false);
+    }
+  }
 
   // Check if current user is moderator
   const isModerator = currentUser && group
@@ -384,18 +527,48 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
                         </div>
                       </div>
 
-                      {/* Payment Progress for Active Members */}
+                      {/* Dynamic Payment Progress Bar for Active Members */}
                       {isActive && (
                         <div className="mt-3 pt-3 border-t border-slate-100">
-                          <div className="flex justify-between text-xs text-slate-600 mb-1">
-                            <span>Paid: KSh {(slot.paidAmount || 0).toLocaleString()}</span>
-                            <span className="font-semibold text-slate-900">{percentPaid}%</span>
+                          <div className="flex items-center justify-between text-xs mb-1.5">
+                            <span className="font-semibold text-slate-700">
+                              Payment Progress:
+                            </span>
+                            <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full ${
+                              percentPaid === 100
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : percentPaid > 0
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {percentPaid}% Paid
+                            </span>
                           </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-[#0E5A3C] rounded-full transition-all"
-                              style={{ width: `${percentPaid}%` }}
-                            />
+
+                          {/* Dynamic Bar: Fills up alongside payment progress; if member has not paid, bar remains empty at 0% */}
+                          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5 relative">
+                            {percentPaid > 0 ? (
+                              <div
+                                className="h-full bg-gradient-to-r from-emerald-500 via-teal-600 to-[#0E5A3C] rounded-full transition-all duration-500 shadow-xs"
+                                style={{ width: `${percentPaid}%` }}
+                              />
+                            ) : (
+                              // Member has not paid yet -> Bar remains completely empty!
+                              <div className="w-0 h-full" />
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5">
+                            <span>KSh {(slot.paidAmount || 0).toLocaleString()} paid</span>
+                            <span>
+                              {slot.paidAmount === 0 ? (
+                                <span className="text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.2 rounded">
+                                  0% · Bar remains empty
+                                </span>
+                              ) : (
+                                `KSh ${Math.max(0, group.productPrice - (slot.paidAmount || 0)).toLocaleString()} remaining`
+                              )}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -404,10 +577,21 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
                     {/* Slot Actions / Status Footer */}
                     <div className="mt-3 pt-2 flex items-center justify-between gap-2">
                       {isActive ? (
-                        <div className="flex items-center gap-2 w-full justify-between">
-                          <span className="text-[11px] text-slate-400 font-mono">
-                            Code: {slot.inviteCode}
-                          </span>
+                        <div className="flex items-center gap-2 w-full justify-between flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              Code: {slot.inviteCode}
+                            </span>
+                            {/* Member Financial Statement & Ledger button */}
+                            <button
+                              onClick={() => handleOpenStatement({ id: slot.userId!, name: slot.userName || 'Member' })}
+                              title="View Customer Statement & Ledger"
+                              className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded transition-colors"
+                            >
+                              <FileText className="w-2.5 h-2.5 text-[#0E5A3C]" />
+                              <span>Statement</span>
+                            </button>
+                          </div>
 
                           <div className="flex items-center gap-1.5">
                             {/* Applaud / Reward coin button */}
@@ -453,6 +637,155 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
               })}
             </div>
           </div>
+
+          {/* PEER TO PEER (P2P) CHAMA LOAN DESK (OPTIONAL) */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#0E5A3C] flex items-center justify-center">
+                  <HandCoins className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>P2P Chama Loan Desk</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase">
+                      Optional
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    3rd-party lenders fund member wallets directly · 1% platform fee · Repayment arranged outside platform
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {mySlot && (
+                  <button
+                    onClick={() => {
+                      const remaining = Math.max(0, (mySlot.targetAmount || group.productPrice) - (mySlot.paidAmount || 0));
+                      setLoanRequestAmount(Math.min(remaining, group.dailyAmount * 2));
+                      setShowLoanModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0E5A3C] hover:bg-[#0b4830] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
+                  >
+                    <HandCoins className="w-3.5 h-3.5" />
+                    <span>Request P2P Loan</span>
+                  </button>
+                )}
+
+                {isModerator && (
+                  <button
+                    onClick={handleNotifyLenders}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg transition-colors"
+                    title="Alert 3rd-party lenders in group chat"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Alert Lenders</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Information Notice */}
+            <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl text-xs text-amber-900 mb-4 flex items-start gap-2">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <b>How P2P Loans Work:</b> A member posts a request in the group. A 3rd-party lender agrees and transfers funds directly into that member's Buyoll wallet. The 3rd party contributes a 1% platform fee to Buyoll. The member then uses their wallet to pay for the item. All loan agreements, interest, and repayments are conducted manually outside the Buyoll platform.
+              </div>
+            </div>
+
+            {/* Loan Requests List */}
+            {loans.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <HandCoins className="w-6 h-6 text-slate-300 mx-auto mb-1" />
+                <p className="text-xs text-slate-500">No active P2P loan requests in this Chama group.</p>
+                {mySlot && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Need help keeping your slot active? Click "Request P2P Loan" above.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {loans.map((loan) => {
+                  const fee = loan.platformFeeAmount || Math.max(1, Math.round(loan.amount * 0.01));
+                  const isFunded = loan.status === 'funded';
+                  const isMyRequest = currentUser && loan.requesterId === currentUser.id;
+
+                  return (
+                    <div
+                      key={loan.id}
+                      className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isFunded
+                          ? 'border-emerald-200 bg-emerald-50/40'
+                          : 'border-slate-200 bg-white shadow-xs'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-slate-900">
+                            {loan.requesterName} (Member #{loan.slotNumber})
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                              isFunded
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {isFunded ? 'Funded' : 'Open Request'}
+                          </span>
+                          {isMyRequest && (
+                            <span className="text-[10px] bg-slate-900 text-white font-bold px-1.5 py-0.2 rounded">
+                              Your Request
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-sm font-black text-slate-900">
+                          KSh {loan.amount.toLocaleString()}
+                          <span className="text-xs font-normal text-slate-500 ml-2">
+                            1% Platform Fee: KSh {fee.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          Purpose: {loan.purpose}
+                        </p>
+
+                        {isFunded && (
+                          <div className="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Funded by <b>{loan.fundedByUserName}</b> · 1% fee paid · Credited to member wallet</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action for 3rd-Party Lenders */}
+                      <div>
+                        {!isFunded && (
+                          <button
+                            onClick={() => {
+                              if (!currentUser) {
+                                onNotify('info', 'Please sign in to fund member loans.');
+                                onOpenAuth();
+                                return;
+                              }
+                              setSelectedLoanToFund(loan);
+                              setLenderAgreedTerms(false);
+                            }}
+                            className="px-3.5 py-2 bg-[#FF6A00] hover:bg-[#e85f00] text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap shadow-xs"
+                          >
+                            Fund Member's Wallet (3rd-Party Lender)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* RIGHT COLUMN: Payment Panel & Group Chat (~35%) */}
@@ -487,8 +820,39 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
               </div>
 
               <form onSubmit={handlePostPayment} className="space-y-3">
+                {/* Instant Wallet Payment Option (from Peer Loan or Store Credit) */}
+                {currentUser && (currentUser.credit || 0) > 0 && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl mb-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                        <Wallet className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Wallet Credit Available</span>
+                      </span>
+                      <span className="text-xs font-black text-emerald-800 tabular-nums">
+                        KSh {(currentUser.credit || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-snug mb-2.5">
+                      You have funds deposited from peer loans or previous returns. Apply them directly to pay for this slot!
+                    </p>
+                    <button
+                      type="button"
+                      disabled={payingFromWallet}
+                      onClick={handlePayFromWallet}
+                      className="w-full py-2 bg-[#0E5A3C] hover:bg-[#0b4830] text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>
+                        {payingFromWallet
+                          ? 'Applying Payment...'
+                          : `Pay KSh ${Math.min(paymentAmount || group.dailyAmount, currentUser.credit || 0).toLocaleString()} from Wallet`}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
                 <div className="p-2.5 bg-amber-50 text-amber-900 rounded-lg text-xs">
-                  Pay only to ChaMall Till <b>000000</b> (Buy Goods). Never pay members directly.
+                  Pay only to Buyoll Till <b>000000</b> (Buy Goods). Never pay members directly.
                 </div>
 
                 <div>
@@ -611,6 +975,100 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
         </div>
       </div>
 
+      {/* RECOMMENDED FROM OTHER SHOPS & MERCHANTS (At least 5 recommendations) */}
+      <section className="border-t border-slate-200 pt-10 mt-6 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="p-1.5 bg-emerald-100 text-[#0E5A3C] rounded-lg">
+                <Store className="w-4 h-4" />
+              </span>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                Recommended from Other Shops & Merchants
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500">
+              Check out other active Chama products from verified merchants across Kenya.
+            </p>
+          </div>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full shrink-0">
+            {recommendedProducts.length} Alternate Shops
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {recommendedProducts.slice(0, 10).map((rec) => {
+            const minDaily = rec.speedOptions && rec.speedOptions.length > 0
+              ? Math.min(...rec.speedOptions.map(s => s.dailyAmount))
+              : Math.ceil(rec.price / 10 / 10);
+
+            return (
+              <div
+                key={rec.id}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  onNavigate('product', rec.id);
+                }}
+                className="group flex flex-col justify-between bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-[#0E5A3C] hover:shadow-md transition-all cursor-pointer p-3"
+              >
+                <div>
+                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-100 mb-2.5">
+                    <img
+                      src={resolveImageUrl(rec.images[0])}
+                      alt={rec.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {rec.discountPercent && rec.discountPercent > 0 && (
+                      <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#FF6A00] text-white text-[10px] font-black rounded">
+                        -{rec.discountPercent}%
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-1 truncate">
+                    <Store className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span className="truncate font-medium text-slate-600">{rec.vendorName}</span>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                  </div>
+
+                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug mb-2 group-hover:text-[#0E5A3C] transition-colors">
+                    {rec.title}
+                  </h4>
+
+                  <div className="flex items-baseline gap-1.5 mb-1">
+                    <span className="text-sm font-extrabold text-slate-900 tabular-nums">
+                      KSh {rec.price.toLocaleString()}
+                    </span>
+                    {rec.wasPrice && rec.wasPrice > rec.price && (
+                      <span className="text-[10px] text-slate-400 line-through tabular-nums">
+                        KSh {rec.wasPrice.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-[#0E5A3C] font-semibold mb-3">
+                    From KSh {minDaily.toLocaleString()} / day
+                  </div>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    onNavigate('product', rec.id);
+                  }}
+                  className="w-full py-1.5 bg-slate-100 group-hover:bg-[#0E5A3C] text-slate-700 group-hover:text-white text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
+                >
+                  <span>Check Shop</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* MODERATOR ACTIONS MODAL */}
       {selectedSlotForAction && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
@@ -705,6 +1163,356 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL 1: REQUEST PEER LOAN (Member Option) */}
+      {showLoanModal && mySlot && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowLoanModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#0E5A3C] flex items-center justify-center">
+                <HandCoins className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">
+                Request P2P Installment Loan
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Post an optional loan request to this Chama group. 3rd-party lenders will see your request in the chat and loan board and can fund your wallet directly.
+            </p>
+
+            <form onSubmit={handleRequestPeerLoan} className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Your Chama Slot:</span>
+                  <span className="font-bold text-slate-900">Member #{mySlot.slotNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Remaining Obligation:</span>
+                  <span className="font-bold text-slate-900">
+                    KSh {Math.max(0, (mySlot.targetAmount || group.productPrice) - (mySlot.paidAmount || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Loan Amount Needed (KSh) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="50"
+                  required
+                  value={loanRequestAmount || ''}
+                  onChange={(e) => setLoanRequestAmount(Number(e.target.value))}
+                  placeholder="e.g. 5000"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E5A3C]"
+                />
+                {loanRequestAmount > 0 && (
+                  <div className="text-[11px] text-slate-500 mt-1 flex justify-between">
+                    <span>1% Platform Escrow Fee:</span>
+                    <b className="text-slate-800">
+                      KSh {Math.max(1, Math.round(loanRequestAmount * 0.01)).toLocaleString()}
+                    </b>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Reason / Purpose Note
+                </label>
+                <input
+                  type="text"
+                  value={loanRequestPurpose}
+                  onChange={(e) => setLoanRequestPurpose(e.target.value)}
+                  placeholder="e.g. Cover upcoming 10-day cycle installment"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E5A3C]"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 text-amber-900 rounded-xl text-[11px] leading-relaxed">
+                ⚖️ <b>Notice:</b> Interest rates, repayment schedule, and loan agreements are negotiated and settled manually outside the Buyoll platform. Buyoll only facilitates direct wallet transfer upon agreement.
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLoanModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingLoanRequest || loanRequestAmount <= 0}
+                  className="px-5 py-2 bg-[#0E5A3C] hover:bg-[#0b4830] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
+                >
+                  {submittingLoanRequest ? 'Posting Request...' : 'Post Loan Request to Group'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: FUND PEER LOAN (3rd-Party Lender Action) */}
+      {selectedLoanToFund && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setSelectedLoanToFund(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 text-[#FF6A00] flex items-center justify-center">
+                <HandCoins className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">
+                Fund Member's Wallet (3rd-Party Lender)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              You are funding <b>{selectedLoanToFund.requesterName}</b> (Member #{selectedLoanToFund.slotNumber}).
+            </p>
+
+            <div className="p-4 bg-slate-50 rounded-xl space-y-2 text-xs mb-4 border border-slate-200">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Loan Principal to Member Wallet:</span>
+                <span className="font-bold text-slate-900">
+                  KSh {selectedLoanToFund.amount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">1% Buyoll Platform Escrow Fee:</span>
+                <span className="font-bold text-[#FF6A00]">
+                  KSh {(selectedLoanToFund.platformFeeAmount || Math.max(1, Math.round(selectedLoanToFund.amount * 0.01))).toLocaleString()}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-200 flex justify-between text-sm font-black text-slate-900">
+                <span>Total Commitment:</span>
+                <span>
+                  KSh {(selectedLoanToFund.amount + (selectedLoanToFund.platformFeeAmount || Math.max(1, Math.round(selectedLoanToFund.amount * 0.01)))).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 text-amber-900 rounded-xl text-xs space-y-2 mb-4">
+              <p className="font-bold">Important 3rd-Party Lender Agreement:</p>
+              <p className="text-[11px] leading-relaxed">
+                All repayment schedules, interest agreements, and collection are strictly arranged and settled manually outside the Buyoll platform. Buyoll takes 1% platform fee for facilitating this loan and deposits the principal directly into the member's wallet to ensure Chama payment continuity.
+              </p>
+              <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={lenderAgreedTerms}
+                  onChange={(e) => setLenderAgreedTerms(e.target.checked)}
+                  className="mt-0.5 rounded text-[#0E5A3C] focus:ring-[#0E5A3C]"
+                />
+                <span className="text-[11px] font-semibold text-slate-800">
+                  I agree that repayments and loan agreements are handled manually outside the Buyoll platform.
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedLoanToFund(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submittingFund || !lenderAgreedTerms}
+                onClick={handleConfirmFundLoan}
+                className="px-5 py-2 bg-[#FF6A00] hover:bg-[#e85f00] text-white text-xs font-bold rounded-lg transition-colors shadow-xs disabled:opacity-50"
+              >
+                {submittingFund ? 'Funding Member Wallet...' : 'Confirm & Deposit to Wallet'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: MEMBER FINANCIAL STATEMENT & LEDGER */}
+      {selectedStatementMember && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl my-8 relative">
+            <button
+              onClick={() => setSelectedStatementMember(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg print:hidden"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Statement Header */}
+            <div className="border-b border-slate-200 pb-4 mb-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0E5A3C] bg-emerald-50 px-2 py-0.5 rounded">
+                    Official Customer Statement
+                  </span>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight mt-1">
+                    Buyoll Member Financial Statement
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Account Holder: <b>{selectedStatementMember.name}</b> · Generated on {new Date().toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => window.print()}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg print:hidden"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Statement</span>
+                </button>
+              </div>
+            </div>
+
+            {loadingStatement ? (
+              <div className="py-12 text-center">
+                <div className="w-6 h-6 border-2 border-[#0E5A3C] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-xs text-slate-400">Loading ledger records...</p>
+              </div>
+            ) : statementData ? (
+              <div className="space-y-6">
+                {/* Financial Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="text-[10px] uppercase font-bold text-slate-500">Total Contributed</div>
+                    <div className="text-lg font-black text-[#0E5A3C] mt-0.5">
+                      KSh {statementData.totalPaid.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="text-[10px] uppercase font-bold text-slate-500">Available Wallet Credit</div>
+                    <div className="text-lg font-black text-slate-900 mt-0.5">
+                      KSh {statementData.currentCredit.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="text-[10px] uppercase font-bold text-slate-500">Active Chama Slots</div>
+                    <div className="text-lg font-black text-slate-900 mt-0.5">
+                      {statementData.activeSlots.length} slot{statementData.activeSlots.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Progress for this Chama */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Active Chama Obligations & Dynamic Progress
+                  </h4>
+                  <div className="space-y-2.5">
+                    {statementData.activeSlots.map((s, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-bold text-slate-900">
+                            {s.groupName} · Slot #{s.slotNumber} ({s.productTitle})
+                          </span>
+                          <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
+                            s.progressPercent === 100
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : s.progressPercent > 0
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            {s.progressPercent}%
+                          </span>
+                        </div>
+                        {/* Dynamic Progress Bar */}
+                        <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-1.5 p-0.5">
+                          {s.progressPercent > 0 ? (
+                            <div
+                              className="h-full bg-gradient-to-r from-emerald-500 to-[#0E5A3C] rounded-full transition-all"
+                              style={{ width: `${s.progressPercent}%` }}
+                            />
+                          ) : (
+                            <div className="w-0 h-full" />
+                          )}
+                        </div>
+                        <div className="flex justify-between text-[11px] text-slate-500">
+                          <span>Paid: KSh {s.paidAmount.toLocaleString()} of KSh {s.targetAmount.toLocaleString()}</span>
+                          <span>Delivery on Day {s.deliveryDay}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detailed Transactions Ledger */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Customer Ledger & Transaction Statement
+                  </h4>
+                  {statementData.transactions.length === 0 ? (
+                    <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+                      No transaction entries recorded yet.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-200 rounded-xl max-h-64 overflow-y-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-100 text-slate-600 font-semibold sticky top-0">
+                          <tr>
+                            <th className="py-2 px-3">Date</th>
+                            <th className="py-2 px-3">Reference</th>
+                            <th className="py-2 px-3">Description</th>
+                            <th className="py-2 px-3 text-right">Debit</th>
+                            <th className="py-2 px-3 text-right">Credit</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {statementData.transactions.map((tx) => (
+                            <tr key={tx.id} className="hover:bg-slate-50">
+                              <td className="py-2 px-3 text-slate-500 whitespace-nowrap">
+                                {new Date(tx.date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })}
+                              </td>
+                              <td className="py-2 px-3 font-mono font-medium text-slate-900 whitespace-nowrap">
+                                {tx.reference}
+                              </td>
+                              <td className="py-2 px-3 text-slate-700 max-w-xs truncate" title={tx.description}>
+                                {tx.description}
+                              </td>
+                              <td className="py-2 px-3 text-right text-red-600 font-medium tabular-nums">
+                                {tx.debit ? `-KSh ${tx.debit.toLocaleString()}` : '—'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-emerald-700 font-bold tabular-nums">
+                                {tx.credit ? `+KSh ${tx.credit.toLocaleString()}` : '—'}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded uppercase bg-emerald-100 text-emerald-800">
+                                  {tx.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-slate-200 text-[11px] text-slate-400 text-center">
+                  Official statement issued by Buyoll Social Fintech · Secured by Buyoll Escrow M-Pesa Till 000000
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

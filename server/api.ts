@@ -1,6 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase, logAudit } from './db.js';
-import { User, Product, ChamaGroup, GroupSlot, DefaultRecord, RefundRequest, PaymentRecord } from '../src/types.js';
+import {
+  User,
+  Product,
+  ChamaGroup,
+  GroupSlot,
+  DefaultRecord,
+  RefundRequest,
+  PaymentRecord,
+  PeerLoanRequest,
+  MemberStatement,
+} from '../src/types.js';
 
 export const apiRouter = Router();
 
@@ -80,6 +90,33 @@ apiRouter.get('/auth/users', async (req: Request, res: Response) => {
       verified: u.verified,
     })),
   });
+});
+
+// -------------------------------------------------------------
+// SEARCH ROUTE
+// -------------------------------------------------------------
+apiRouter.get('/search', async (req: Request, res: Response) => {
+  const db = await getDatabase();
+  const q = String(req.query.q || req.query.search || '').toLowerCase().trim();
+  
+  if (!q) {
+    const liveProducts = db.products.filter(p => p.live);
+    return res.json({ products: liveProducts, query: '', total: liveProducts.length });
+  }
+
+  const results = db.products.filter(p => {
+    if (!p.live) return false;
+    const titleMatch = p.title.toLowerCase().includes(q);
+    const descMatch = p.description.toLowerCase().includes(q);
+    const catMatch = p.category.toLowerCase().includes(q);
+    const vendorMatch = p.vendorName.toLowerCase().includes(q);
+    const attrMatch = p.attributes
+      ? Object.values(p.attributes).some(v => String(v).toLowerCase().includes(q))
+      : false;
+    return titleMatch || descMatch || catMatch || vendorMatch || attrMatch;
+  });
+
+  res.json({ products: results, query: q, total: results.length });
 });
 
 // -------------------------------------------------------------
@@ -248,8 +285,13 @@ apiRouter.put('/products/:id', async (req: Request, res: Response) => {
     product.speedOptions = speedOptions;
   }
 
-  if (isFeatured !== undefined && user.role === 'admin') {
-    product.isFeatured = Boolean(isFeatured);
+  if (isFeatured !== undefined) {
+    const willBeFeatured = Boolean(isFeatured);
+    if (willBeFeatured && !product.isFeatured) {
+      // Record 500 KSh merchant featured listing placement
+      logAudit(db, user.id, user.name, 'FEATURED_LISTING_PAID', `Merchant opted in to Featured Hero Deal for product #${product.id} (KSh 500 placement fee)`);
+    }
+    product.isFeatured = willBeFeatured;
   }
 
   if (live !== undefined) {
@@ -879,6 +921,368 @@ apiRouter.post('/groups/:id/chat', async (req: Request, res: Response) => {
 
   await saveDatabase(db);
   res.json({ group });
+});
+
+// -------------------------------------------------------------
+// PEER-TO-PEER LOAN SIMPLE MODEL IN GROUPS
+// 3rd-party lender funds member wallet directly; 1% fee paid to platform
+// Repayment and loan terms handled manually outside the platform
+// -------------------------------------------------------------
+apiRouter.get('/groups/:id/loans', async (req: Request, res: Response) => {
+  const db = await getDatabase();
+  const groupId = Number(req.params.id);
+  const loans = (db.peerLoans || []).filter(l => l.groupId === groupId);
+  res.json({ loans });
+});
+
+apiRouter.post('/groups/:id/loans/request', async (req: Request, res: Response) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Authentication required' });
+
+  const groupId = Number(req.params.id);
+  const db = await getDatabase();
+  const group = db.groups.find(g => g.id === groupId);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+
+  // Find member's active slot in this group
+  const slot = group.slots.find(s => s.userId === user.id && s.status === 'active');
+  if (!slot) {
+    return res.status(400).json({ error: 'You must have an active slot in this Chama to request a peer loan.' });
+  }
+
+  const { amount, purpose } = req.body;
+  const numAmount = Number(amount);
+  if (numAmount <= 0) {
+    return res.status(400).json({ error: 'Loan amount must be greater than zero.' });
+  }
+
+  const remainingOwed = Math.max(0, (slot.targetAmount || group.productPrice) - (slot.paidAmount || 0));
+  if (numAmount > remainingOwed && remainingOwed > 0) {
+    return res.status(400).json({
+      error: `Requested loan (KSh ${numAmount.toLocaleString()}) exceeds your remaining slot obligation of KSh ${remainingOwed.toLocaleString()}.`,
+    });
+  }
+
+  // 1% platform facilitation fee
+  const platformFee = Math.max(1, Math.round(numAmount * 0.01));
+
+  const newLoan: PeerLoanRequest = {
+    id: db.nextIds.peerLoan++,
+    groupId: group.id,
+    groupName: group.name,
+    slotNumber: slot.slotNumber,
+    requesterId: user.id,
+    requesterName: user.name,
+    requesterPhone: user.phone,
+    amount: numAmount,
+    purpose: purpose?.trim() || `Installment support for Slot #${slot.slotNumber} (${group.productTitle})`,
+    status: 'open',
+    createdAt: Date.now(),
+    platformFeeAmount: platformFee,
+    platformFeeStatus: 'pending',
+    externalAgreementAcknowledged: true,
+  };
+
+  db.peerLoans = db.peerLoans || [];
+  db.peerLoans.unshift(newLoan);
+
+  // Post to Chama group chat so 3rd parties & moderators see the request
+  group.chat.push({
+    id: `chat_${Date.now()}`,
+    senderId: user.id,
+    senderName: user.name,
+    kind: 'system',
+    text: `📢 PEER LOAN REQUEST: ${user.name} (Member #${slot.slotNumber}) requested a P2P loan of KSh ${numAmount.toLocaleString()} to keep up with Chama payments. 3rd-party lenders: you can review and fund this member's wallet directly. 1% platform fee (KSh ${platformFee}) applies. All repayments and loan agreements are settled manually outside Buyoll.`,
+    timestamp: Date.now(),
+  });
+
+  logAudit(
+    db,
+    user.id,
+    user.name,
+    'PEER_LOAN_REQUESTED',
+    `Requested P2P loan of KSh ${numAmount} for Chama #${group.id} Slot #${slot.slotNumber}`
+  );
+
+  await saveDatabase(db);
+  res.status(201).json({
+    loan: newLoan,
+    message: 'Your peer loan request has been posted to the Chama group chat and loan board.',
+  });
+});
+
+apiRouter.post('/groups/:id/loans/:loanId/fund', async (req: Request, res: Response) => {
+  const lender = await getAuthenticatedUser(req);
+  if (!lender) return res.status(401).json({ error: 'You must be signed in to fund this peer loan.' });
+
+  const groupId = Number(req.params.id);
+  const loanId = Number(req.params.loanId);
+  const db = await getDatabase();
+  const group = db.groups.find(g => g.id === groupId);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+
+  const loan = (db.peerLoans || []).find(l => l.id === loanId);
+  if (!loan) return res.status(404).json({ error: 'Loan request not found' });
+
+  if (loan.status !== 'open') {
+    return res.status(400).json({ error: 'This loan request has already been funded or closed.' });
+  }
+
+  if (loan.requesterId === lender.id) {
+    return res.status(400).json({ error: 'You cannot fund your own peer loan request.' });
+  }
+
+  const requester = db.users.find(u => u.id === loan.requesterId);
+  if (!requester) return res.status(404).json({ error: 'Borrowing member account not found.' });
+
+  const feeAmount = loan.platformFeeAmount || Math.max(1, Math.round(loan.amount * 0.01));
+
+  // If lender has credit, deduct loan + fee; otherwise register simulated funding
+  if (lender.credit >= loan.amount + feeAmount) {
+    lender.credit -= (loan.amount + feeAmount);
+  }
+
+  // Credit member's wallet balance directly so they can pay for the item
+  requester.credit = (requester.credit || 0) + loan.amount;
+
+  // Record member ledger statement entry for loan received
+  const requesterLedger = {
+    id: db.nextIds.ledger++,
+    userId: requester.id,
+    amount: loan.amount,
+    balanceAfter: requester.credit,
+    type: 'admin_adjustment' as const,
+    referenceId: `P2P_LOAN_${loan.id}`,
+    note: `P2P Loan received from 3rd-party lender ${lender.name} (KSh ${loan.amount.toLocaleString()}) for Chama #${group.id} Slot #${loan.slotNumber}. Repayment external.`,
+    createdAt: Date.now(),
+  };
+  db.storeCreditLedger.unshift(requesterLedger);
+
+  // Record platform fee deduction entry
+  const platformFeeLedger = {
+    id: db.nextIds.ledger++,
+    userId: lender.id,
+    amount: -feeAmount,
+    balanceAfter: lender.credit,
+    type: 'purchase_deduction' as const,
+    referenceId: `P2P_FEE_${loan.id}`,
+    note: `1% Buyoll P2P platform escrow fee for funding loan #${loan.id}`,
+    createdAt: Date.now(),
+  };
+  db.storeCreditLedger.unshift(platformFeeLedger);
+
+  // Update loan record
+  loan.status = 'funded';
+  loan.fundedByUserId = lender.id;
+  loan.fundedByUserName = lender.name;
+  loan.fundedAt = Date.now();
+  loan.platformFeeStatus = 'paid';
+
+  // Post announcement to group chat
+  group.chat.push({
+    id: `chat_${Date.now()}`,
+    senderId: lender.id,
+    senderName: lender.name,
+    kind: 'system',
+    text: `✅ PEER LOAN FUNDED: 3rd-party lender ${lender.name} has funded KSh ${loan.amount.toLocaleString()} directly into ${requester.name}’s wallet! 1% platform fee (KSh ${feeAmount}) paid to Buyoll. ${requester.name} can now use these wallet funds to pay for Slot #${loan.slotNumber}. (Repayment and terms are handled manually outside the platform).`,
+    timestamp: Date.now(),
+  });
+
+  logAudit(
+    db,
+    lender.id,
+    lender.name,
+    'PEER_LOAN_FUNDED',
+    `Funded P2P loan #${loan.id} of KSh ${loan.amount} for ${requester.name}. 1% fee (KSh ${feeAmount}) collected.`
+  );
+
+  await saveDatabase(db);
+  res.json({
+    loan,
+    message: `Loan funded successfully! KSh ${loan.amount.toLocaleString()} was transferred directly into ${requester.name}’s wallet, and 1% platform fee (KSh ${feeAmount}) was recorded.`,
+  });
+});
+
+// Member uses wallet funds (from P2P loan or credit balance) to pay Chama slot
+apiRouter.post('/groups/:id/pay-from-wallet', async (req: Request, res: Response) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Authentication required' });
+
+  const groupId = Number(req.params.id);
+  const { slotNumber, amount } = req.body;
+  const numAmount = Number(amount);
+
+  if (numAmount <= 0) {
+    return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
+  }
+
+  const db = await getDatabase();
+  const group = db.groups.find(g => g.id === groupId);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+
+  const slot = group.slots.find(s => s.slotNumber === Number(slotNumber) && s.userId === user.id && s.status === 'active');
+  if (!slot) {
+    return res.status(400).json({ error: 'Active slot not found for your account in this group.' });
+  }
+
+  if ((user.credit || 0) < numAmount) {
+    return res.status(400).json({
+      error: `Insufficient wallet balance. You have KSh ${(user.credit || 0).toLocaleString()}, but attempted to pay KSh ${numAmount.toLocaleString()}.`,
+    });
+  }
+
+  // Deduct from wallet
+  user.credit -= numAmount;
+
+  // Credit slot
+  slot.paidAmount = (slot.paidAmount || 0) + numAmount;
+  slot.lastPaymentDate = Date.now();
+
+  // Create approved payment record
+  const paymentCode = `WAL_${generateCode(6)}`;
+  const paymentRecord: PaymentRecord = {
+    id: db.nextIds.payment++,
+    type: 'group_installment',
+    userId: user.id,
+    userName: user.name,
+    code: paymentCode,
+    amount: numAmount,
+    groupId: group.id,
+    groupName: group.name,
+    slotNumber: slot.slotNumber,
+    productId: group.productId,
+    status: 'approved',
+    createdAt: Date.now(),
+    approvedAt: Date.now(),
+  };
+  db.payments.unshift(paymentRecord);
+
+  // Add ledger statement entry
+  const ledgerEntry = {
+    id: db.nextIds.ledger++,
+    userId: user.id,
+    amount: -numAmount,
+    balanceAfter: user.credit,
+    type: 'purchase_deduction' as const,
+    referenceId: paymentCode,
+    note: `Chama Slot #${slot.slotNumber} installment for "${group.productTitle}" paid from wallet balance`,
+    createdAt: Date.now(),
+  };
+  db.storeCreditLedger.unshift(ledgerEntry);
+
+  // Reward points
+  user.points = (user.points || 0) + Math.floor(numAmount / 10);
+
+  // Post chat notification
+  const progressPercent = Math.min(100, Math.round(((slot.paidAmount || 0) / group.productPrice) * 100));
+  group.chat.push({
+    id: `chat_${Date.now()}`,
+    senderId: user.id,
+    senderName: user.name,
+    kind: 'normal',
+    text: `💳 Paid KSh ${numAmount.toLocaleString()} for Slot #${slot.slotNumber} using Buyoll wallet! Payment progress is now ${progressPercent}%.`,
+    timestamp: Date.now(),
+  });
+
+  logAudit(
+    db,
+    user.id,
+    user.name,
+    'WALLET_SLOT_PAYMENT',
+    `Paid KSh ${numAmount} for Chama #${group.id} Slot #${slot.slotNumber} via wallet balance. Reference: ${paymentCode}`
+  );
+
+  await saveDatabase(db);
+  res.json({
+    group,
+    walletBalance: user.credit,
+    paidAmount: slot.paidAmount,
+    progressPercent,
+    message: `Payment of KSh ${numAmount.toLocaleString()} successfully applied from your wallet! Dynamic progress updated to ${progressPercent}%.`,
+  });
+});
+
+// Member full financial statement & ledger
+apiRouter.get('/ledger/statement/:userId', async (req: Request, res: Response) => {
+  const targetUserId = Number(req.params.userId);
+  const db = await getDatabase();
+  const targetUser = db.users.find(u => u.id === targetUserId);
+
+  if (!targetUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  // Find all active slots across all groups
+  const activeSlots: any[] = [];
+  let totalPaid = 0;
+
+  for (const grp of db.groups) {
+    for (const slot of grp.slots) {
+      if (slot.userId === targetUserId && slot.status === 'active') {
+        const slotPaid = slot.paidAmount || 0;
+        totalPaid += slotPaid;
+        const progressPercent = Math.min(100, Math.round((slotPaid / (slot.targetAmount || grp.productPrice || 1)) * 100));
+        activeSlots.push({
+          groupId: grp.id,
+          groupName: grp.name,
+          productTitle: grp.productTitle,
+          slotNumber: slot.slotNumber,
+          dailyAmount: grp.dailyAmount,
+          targetAmount: slot.targetAmount || grp.productPrice,
+          paidAmount: slotPaid,
+          progressPercent,
+          cycleDays: grp.cycleDays,
+          deliveryDay: slot.slotNumber * grp.cycleDays,
+          status: slot.status,
+        });
+      }
+    }
+  }
+
+  // Build combined statement transactions
+  const transactions: any[] = [];
+
+  // 1. Payments made
+  const userPayments = db.payments.filter(p => p.userId === targetUserId);
+  for (const p of userPayments) {
+    transactions.push({
+      id: p.id,
+      date: p.createdAt,
+      reference: p.code,
+      type: p.type === 'group_installment' ? 'Chama Installment' : p.type,
+      description: p.groupName ? `${p.groupName} (Slot #${p.slotNumber || 1})` : 'Buyoll Payment',
+      credit: p.amount,
+      status: p.status,
+    });
+  }
+
+  // 2. Ledger entries
+  const userLedger = db.storeCreditLedger.filter(l => l.userId === targetUserId);
+  for (const l of userLedger) {
+    transactions.push({
+      id: l.id + 100000,
+      date: l.createdAt,
+      reference: l.referenceId || `LED-${l.id}`,
+      type: 'Wallet / Credit Ledger',
+      description: l.note,
+      debit: l.amount < 0 ? Math.abs(l.amount) : undefined,
+      credit: l.amount > 0 ? l.amount : undefined,
+      status: 'approved',
+    });
+  }
+
+  // Sort by date descending
+  transactions.sort((a, b) => b.date - a.date);
+
+  const statement: MemberStatement = {
+    user: targetUser,
+    totalPaid,
+    currentCredit: targetUser.credit || 0,
+    activeSlots,
+    transactions,
+  };
+
+  res.json({ statement });
 });
 
 // -------------------------------------------------------------

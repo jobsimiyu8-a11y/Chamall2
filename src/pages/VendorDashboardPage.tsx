@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Product, ChamaGroup } from '../types.ts';
-import { api } from '../api.ts';
+import { api, resolveImageUrl } from '../api.ts';
 import { VendorProductEditorModal } from './VendorProductEditorModal.tsx';
 import {
   Package,
@@ -12,6 +12,8 @@ import {
   Clock,
   ArrowRight,
   TrendingUp,
+  Sparkles,
+  Tag,
 } from 'lucide-react';
 
 interface VendorDashboardPageProps {
@@ -134,6 +136,40 @@ export const VendorDashboardPage: React.FC<VendorDashboardPageProps> = ({
         </div>
       </div>
 
+      {/* FEATURED DEAL HERO SHOWCASE PROMOTION */}
+      <div className="bg-gradient-to-r from-emerald-900 to-[#0E5A3C] rounded-2xl p-6 text-white mb-8 shadow-sm border border-emerald-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="p-1 bg-amber-400 text-slate-900 rounded-md">
+              <Sparkles className="w-3.5 h-3.5" />
+            </span>
+            <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+              Featured Deal Section Placement
+            </span>
+            <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full">
+              KSh 500 / month per featured image
+            </span>
+          </div>
+          <h3 className="text-base font-bold text-white">
+            Promote Your Products to Over 100,000+ Active Group Savers
+          </h3>
+          <p className="text-xs text-emerald-100/90 mt-1 max-w-2xl">
+            Featured announcements appear at the top hero banner with 2.5-second auto-rolling visibility, guaranteed slot priority, and direct M-Pesa Till 000000 escrow integration.
+          </p>
+        </div>
+
+        <button
+          onClick={() => {
+            setEditingProduct(null);
+            setIsEditorOpen(true);
+          }}
+          className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 flex items-center gap-1.5"
+        >
+          <Tag className="w-3.5 h-3.5" />
+          <span>Feature an Announcement</span>
+        </button>
+      </div>
+
       {/* Product Listings Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs mb-8">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -184,7 +220,7 @@ export const VendorDashboardPage: React.FC<VendorDashboardPageProps> = ({
                       <td className="py-3 px-6">
                         <div className="flex items-center gap-3">
                           <img
-                            src={p.images[0] || '/src/assets/images/stainless_cookware_set_1792852473733.jpg'}
+                            src={resolveImageUrl(p.images[0])}
                             alt=""
                             className="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0"
                           />

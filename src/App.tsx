@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from './types.ts';
-import { api, getStoredUser, setStoredUser } from './api.ts';
+import { api, getStoredUser, setStoredUser, resolveImageUrl } from './api.ts';
 import { Header } from './components/Header.tsx';
 import { HomePage } from './pages/HomePage.tsx';
 import { ProductDetailPage } from './pages/ProductDetailPage.tsx';
@@ -112,6 +112,7 @@ export default function App() {
           <HomePage
             onSelectProduct={(id) => handleNavigate('product', id)}
             searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
           />
         )}
 
@@ -179,18 +180,21 @@ export default function App() {
       <footer className="bg-white border-t border-slate-200 py-10 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-md bg-[#0E5A3C] text-amber-300 font-extrabold flex items-center justify-center text-xs">
-                C
-              </span>
-              <span className="font-bold text-slate-800">
-                Alibaird Social Fintech Marketplace
+            <div className="flex items-center gap-3">
+              <img
+                src={resolveImageUrl('buyoll_logo.png')}
+                alt="Buyoll"
+                className="h-7 w-auto object-contain"
+                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+              />
+              <span className="font-bold text-slate-800 text-sm">
+                Buyoll Social Fintech Marketplace
               </span>
               <span className="text-slate-400">· All Rights Reserved</span>
             </div>
 
             <div className="flex items-center gap-6">
-              <span>ChaMall Escrow Till: <b className="text-slate-900">000000</b></span>
+              <span>Buyoll Escrow Till: <b className="text-slate-900">000000</b></span>
               <span>100% Verified Merchant Guarantee</span>
             </div>
           </div>

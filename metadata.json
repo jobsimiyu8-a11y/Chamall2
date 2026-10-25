@@ -1,6 +1,6 @@
 {
-  "name": "Alibaird - Social Fintech Chama Marketplace",
-  "description": "Next-generation social fintech e-commerce platform with Chama group savings, immediate group activation, moderator controls, and secure ledger.",
+  "name": "Buyoll - Social Fintech Chama Marketplace",
+  "description": "Buyoll - Social fintech e-commerce platform with Chama group savings, featured deals, newly posted announcements, immediate group activation, and escrow protection.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

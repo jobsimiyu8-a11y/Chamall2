@@ -1,5 +1,6 @@
 import React from 'react';
 import { User } from '../types.ts';
+import { resolveImageUrl } from '../api.ts';
 import { ShoppingBag, Wallet, Shield, Store, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 
 interface HeaderProps {
@@ -25,42 +26,57 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
       {/* Top micro-strip */}
       <div className="bg-[#0E5A3C] text-emerald-50 text-xs py-1.5 px-4 text-center font-medium tracking-wide">
-        Pay a little every day. Receive items in rotation every 10 days · Secured by ChaMall M-Pesa Till <span className="font-bold text-amber-300">000000</span>
+        Buyoll: Pay a little every day. Receive items in rotation every 10 days · Secured by Buyoll M-Pesa Till <span className="font-bold text-amber-300">000000</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-6 h-16">
-          {/* Zone 1: Single Brand element */}
+        <div className="flex items-center justify-between gap-6 min-h-[5.5rem] py-2">
+          {/* Zone 1: Buyoll Official Logo (x2 size, only the arrow-head brand mark) */}
           <button
-            onClick={() => onNavigate('home')}
-            className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-slate-900 shrink-0 hover:opacity-90 transition-opacity"
+            onClick={() => {
+              onSearchChange('');
+              onNavigate('home');
+            }}
+            className="flex items-center shrink-0 hover:opacity-95 transition-all p-1"
+            title="Buyoll Home"
           >
-            <span className="w-8 h-8 rounded-lg bg-[#0E5A3C] text-amber-300 flex items-center justify-center font-black text-lg shadow-sm">
-              C
-            </span>
-            <span>
-              Ali<span className="text-[#0E5A3C]">baird</span> <span className="text-[#FF6A00]">Chama</span>
-            </span>
+            <img
+              src={resolveImageUrl('buyoll_logo.png')}
+              alt="Buyoll"
+              className="h-16 sm:h-20 w-auto max-w-[260px] object-contain drop-shadow-xs"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.endsWith('Buyoll_Shopping_Cart_Logo_23c2cc30.png')) {
+                  target.src = './assets/aistudio/Buyoll_Shopping_Cart_Logo_23c2cc30.png';
+                }
+              }}
+            />
           </button>
 
-          {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
+          {/* Search Bar with Live Backend Connection */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onNavigate('home');
+            }}
+            className="hidden md:flex flex-1 max-w-md mx-4"
+          >
             <div className="relative w-full">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search appliances, electronics, solar, cookware..."
-                className="w-full pl-3.5 pr-20 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E5A3C] focus:bg-white transition-all text-slate-900 placeholder:text-slate-400"
+                className="w-full pl-3.5 pr-20 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E5A3C] focus:bg-white transition-all text-slate-900 placeholder:text-slate-400 shadow-xs"
               />
               <button
-                onClick={() => onNavigate('home')}
-                className="absolute right-1 top-1 bottom-1 px-3 bg-[#FF6A00] hover:bg-[#e85f00] text-white text-xs font-semibold rounded-md transition-colors"
+                type="submit"
+                className="absolute right-1 top-1 bottom-1 px-4 bg-[#FF6A00] hover:bg-[#e85f00] text-white text-xs font-bold rounded-md transition-colors shadow-xs"
               >
                 Search
               </button>
             </div>
-          </div>
+          </form>
 
           {/* Zone 2: Clean single-line nav links */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600">

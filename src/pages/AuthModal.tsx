@@ -80,10 +80,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </button>
 
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Sign In to Alibaird Chama
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <div className="flex items-center gap-3 mb-2">
+            <img
+              src="./buyoll_logo.png"
+              alt="Buyoll"
+              className="h-9 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+            />
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Sign In to Buyoll
+            </h2>
+          </div>
+          <p className="text-xs text-slate-500">
             Access your Chama groups, escrow wallet, or merchant portal.
           </p>
         </div>

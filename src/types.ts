@@ -153,6 +153,55 @@ export interface StoreCreditLedgerEntry {
   createdAt: number;
 }
 
+export interface PeerLoanRequest {
+  id: number;
+  groupId: number;
+  groupName: string;
+  slotNumber: number;
+  requesterId: number;
+  requesterName: string;
+  requesterPhone?: string;
+  amount: number;
+  purpose: string;
+  status: 'open' | 'funded' | 'cancelled';
+  createdAt: number;
+  fundedByUserId?: number;
+  fundedByUserName?: string;
+  fundedAt?: number;
+  platformFeeAmount: number; // 1% of amount
+  platformFeeStatus: 'pending' | 'paid';
+  externalAgreementAcknowledged: boolean;
+}
+
+export interface MemberStatement {
+  user: User;
+  totalPaid: number;
+  currentCredit: number;
+  activeSlots: {
+    groupId: number;
+    groupName: string;
+    productTitle: string;
+    slotNumber: number;
+    dailyAmount: number;
+    targetAmount: number;
+    paidAmount: number;
+    progressPercent: number;
+    cycleDays: number;
+    deliveryDay: number;
+    status: string;
+  }[];
+  transactions: {
+    id: number;
+    date: number;
+    reference: string;
+    type: string;
+    description: string;
+    debit?: number;
+    credit?: number;
+    status: string;
+  }[];
+}
+
 export interface AuditLog {
   id: number;
   timestamp: number;
@@ -161,3 +210,4 @@ export interface AuditLog {
   action: string;
   details: string;
 }
+

@@ -12,6 +12,7 @@ import {
   StoreCreditLedgerEntry,
   AuditLog,
   SpeedOption,
+  PeerLoanRequest,
 } from '../src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +27,7 @@ export interface DatabaseSchema {
   defaultRecords: DefaultRecord[];
   refundRequests: RefundRequest[];
   payments: PaymentRecord[];
+  peerLoans: PeerLoanRequest[];
   storeCreditLedger: StoreCreditLedgerEntry[];
   auditLogs: AuditLog[];
   nextIds: {
@@ -35,6 +37,7 @@ export interface DatabaseSchema {
     defaultRecord: number;
     refundRequest: number;
     payment: number;
+    peerLoan: number;
     ledger: number;
     audit: number;
   };
@@ -59,9 +62,9 @@ function getInitialDatabase(): DatabaseSchema {
   const users: User[] = [
     {
       id: 1,
-      name: 'Alibaird System Admin',
+      name: 'Buyoll System Admin',
       phone: '0700000000',
-      email: 'admin@alibaird.com',
+      email: 'admin@buyoll.com',
       role: 'admin',
       credit: 0,
       coins: 200,
@@ -71,11 +74,11 @@ function getInitialDatabase(): DatabaseSchema {
     },
     {
       id: 2,
-      name: 'Alibaird Direct Electronics & Home',
+      name: 'Buyoll Direct Official',
       phone: '0722000000',
-      email: 'direct@alibaird.com',
+      email: 'direct@buyoll.com',
       role: 'merchant',
-      shopName: 'Alibaird Direct Official',
+      shopName: 'Buyoll Direct Official',
       shopDescription: 'Official verified distributor of solar generators, appliances & smart electronics.',
       verified: true,
       credit: 0,
@@ -83,6 +86,96 @@ function getInitialDatabase(): DatabaseSchema {
       points: 250,
       lastActive: now,
       createdAt: now - 20 * dayMs,
+    },
+    {
+      id: 11,
+      name: 'Apex Electronics Kenya',
+      phone: '0733000000',
+      email: 'apex@buyoll.com',
+      role: 'merchant',
+      shopName: 'Apex Electronics Kenya',
+      shopDescription: 'Direct distributor of 4K Smart TVs, Home Audio & Solar Security Systems.',
+      verified: true,
+      credit: 0,
+      coins: 100,
+      points: 150,
+      lastActive: now,
+      createdAt: now - 15 * dayMs,
+    },
+    {
+      id: 12,
+      name: 'Kilimani Office & Living',
+      phone: '0744000000',
+      email: 'kilimani@buyoll.com',
+      role: 'merchant',
+      shopName: 'Kilimani Office & Living',
+      shopDescription: 'Ergonomic workspace furniture, executive chairs, and modern study decor.',
+      verified: true,
+      credit: 0,
+      coins: 80,
+      points: 120,
+      lastActive: now,
+      createdAt: now - 14 * dayMs,
+    },
+    {
+      id: 13,
+      name: 'Rift Valley Cookware Crafts',
+      phone: '0755000000',
+      email: 'rift@buyoll.com',
+      role: 'merchant',
+      shopName: 'Rift Valley Cookware Crafts',
+      shopDescription: 'Authentic 18/10 stainless steel cookware, induction pans & kitchen essentials.',
+      verified: true,
+      credit: 0,
+      coins: 90,
+      points: 110,
+      lastActive: now,
+      createdAt: now - 12 * dayMs,
+    },
+    {
+      id: 14,
+      name: 'Savanna Tech & Solar Solutions',
+      phone: '0766000000',
+      email: 'savanna@buyoll.com',
+      role: 'merchant',
+      shopName: 'Savanna Tech & Solar Solutions',
+      shopDescription: 'Commercial blenders, off-grid power solutions and energy-efficient kitchen gear.',
+      verified: true,
+      credit: 0,
+      coins: 70,
+      points: 95,
+      lastActive: now,
+      createdAt: now - 11 * dayMs,
+    },
+    {
+      id: 15,
+      name: 'Nairobi Smart Living & Appliances',
+      phone: '0777000000',
+      email: 'nairobi@buyoll.com',
+      role: 'merchant',
+      shopName: 'Nairobi Smart Living & Appliances',
+      shopDescription: 'Inverter refrigerators, water dispensers and modern kitchen cooling appliances.',
+      verified: true,
+      credit: 0,
+      coins: 60,
+      points: 75,
+      lastActive: now,
+      createdAt: now - 10 * dayMs,
+    },
+    {
+      id: 16,
+      name: 'Eldoret Fresh Bedding & Decor',
+      phone: '0788000000',
+      email: 'eldoret@buyoll.com',
+      role: 'merchant',
+      shopName: 'Eldoret Fresh Bedding & Decor',
+      shopDescription: 'Orthopedic memory foam mattresses, luxury duvet sets and bedroom ergonomics.',
+      verified: true,
+      credit: 0,
+      coins: 60,
+      points: 80,
+      lastActive: now,
+      createdAt: now - 9 * dayMs,
     },
     {
       id: 3,
@@ -106,6 +199,18 @@ function getInitialDatabase(): DatabaseSchema {
       lastActive: now,
       createdAt: now - 8 * dayMs,
     },
+    {
+      id: 30,
+      name: 'Grace Wambui (3rd-Party Chama Lender)',
+      phone: '0711223344',
+      email: 'grace.lender@buyoll.com',
+      role: 'buyer',
+      credit: 120000,
+      coins: 200,
+      points: 450,
+      lastActive: now,
+      createdAt: now - 18 * dayMs,
+    },
   ];
 
   const products: Product[] = [
@@ -117,9 +222,9 @@ function getInitialDatabase(): DatabaseSchema {
       price: 68000,
       wasPrice: 78000,
       discountPercent: 13,
-      images: ['/src/assets/images/solar_power_backup_station_1792852473757.jpg'],
+      images: ['./images/solar_power.jpg'],
       vendorId: 2,
-      vendorName: 'Alibaird Direct Official',
+      vendorName: 'Buyoll Direct Official',
       isFeatured: true,
       live: true,
       moderationStatus: 'approved',
@@ -136,8 +241,8 @@ function getInitialDatabase(): DatabaseSchema {
         { size: 4, cycleDays: 10, dailyAmount: 1700, totalAmount: 68000, description: '4 members · KSh 1,700 daily · Express 40-day delivery' },
         { size: 2, cycleDays: 10, dailyAmount: 3400, totalAmount: 68000, description: '2 members · KSh 3,400 daily · Fast-track 20-day duo' },
       ],
-      createdAt: now - 5 * dayMs,
-      updatedAt: now - 5 * dayMs,
+      createdAt: now, // Posted today (0 days ago)
+      updatedAt: now,
     },
     {
       id: 2,
@@ -147,9 +252,9 @@ function getInitialDatabase(): DatabaseSchema {
       price: 14500,
       wasPrice: 17000,
       discountPercent: 15,
-      images: ['/src/assets/images/stainless_cookware_set_1792852473733.jpg'],
-      vendorId: 2,
-      vendorName: 'Alibaird Direct Official',
+      images: ['./images/cookware_set.jpg'],
+      vendorId: 13,
+      vendorName: 'Rift Valley Cookware Crafts',
       isFeatured: true,
       live: true,
       moderationStatus: 'approved',
@@ -166,8 +271,8 @@ function getInitialDatabase(): DatabaseSchema {
         { size: 4, cycleDays: 10, dailyAmount: 363, totalAmount: 14500, description: '4 members · KSh 363 daily · Completed in 40 days' },
         { size: 2, cycleDays: 10, dailyAmount: 725, totalAmount: 14500, description: '2 members · KSh 725 daily · Completed in 20 days' },
       ],
-      createdAt: now - 4 * dayMs,
-      updatedAt: now - 4 * dayMs,
+      createdAt: now - 1 * dayMs, // Posted 1 day ago
+      updatedAt: now - 1 * dayMs,
     },
     {
       id: 3,
@@ -177,9 +282,9 @@ function getInitialDatabase(): DatabaseSchema {
       price: 46000,
       wasPrice: 52000,
       discountPercent: 12,
-      images: ['/src/assets/images/smart_uhd_television_1792852474781.jpg'],
-      vendorId: 2,
-      vendorName: 'Alibaird Direct Official',
+      images: ['./images/smart_tv.jpg'],
+      vendorId: 11,
+      vendorName: 'Apex Electronics Kenya',
       isFeatured: true,
       live: true,
       moderationStatus: 'approved',
@@ -196,8 +301,8 @@ function getInitialDatabase(): DatabaseSchema {
         { size: 4, cycleDays: 10, dailyAmount: 1150, totalAmount: 46000, description: '4 members · KSh 1,150 daily · 40-day fulfillment' },
         { size: 2, cycleDays: 10, dailyAmount: 2300, totalAmount: 46000, description: '2 members · KSh 2,300 daily · 20-day duo speed' },
       ],
-      createdAt: now - 3 * dayMs,
-      updatedAt: now - 3 * dayMs,
+      createdAt: now - 2 * dayMs, // Posted 2 days ago
+      updatedAt: now - 2 * dayMs,
     },
     {
       id: 4,
@@ -207,10 +312,10 @@ function getInitialDatabase(): DatabaseSchema {
       price: 24000,
       wasPrice: 28500,
       discountPercent: 16,
-      images: ['/src/assets/images/executive_ergonomic_chair_1792852475009.jpg'],
-      vendorId: 2,
-      vendorName: 'Alibaird Direct Official',
-      isFeatured: false,
+      images: ['./images/office_chair.jpg'],
+      vendorId: 12,
+      vendorName: 'Kilimani Office & Living',
+      isFeatured: true,
       live: true,
       moderationStatus: 'approved',
       stockQuantity: 20,
@@ -226,8 +331,128 @@ function getInitialDatabase(): DatabaseSchema {
         { size: 4, cycleDays: 10, dailyAmount: 600, totalAmount: 24000, description: '4 members · KSh 600 daily · 40 days total' },
         { size: 2, cycleDays: 10, dailyAmount: 1200, totalAmount: 24000, description: '2 members · KSh 1,200 daily · 20 days duo' },
       ],
-      createdAt: now - 2 * dayMs,
-      updatedAt: now - 2 * dayMs,
+      createdAt: now - 3 * dayMs, // Posted 3 days ago
+      updatedAt: now - 3 * dayMs,
+    },
+    {
+      id: 5,
+      title: 'Smart Inverter Double-Door Refrigerator (260L Frost-Free)',
+      description: 'Energy-saving digital inverter cooling, multi-airflow humidity control crisper, interior LED lighting, and anti-bacterial gasket protection for fresh family food storage.',
+      category: 'Appliances',
+      price: 38500,
+      wasPrice: 44000,
+      discountPercent: 12,
+      images: ['./images/solar_power.jpg'],
+      vendorId: 15,
+      vendorName: 'Nairobi Smart Living & Appliances',
+      isFeatured: true,
+      live: true,
+      moderationStatus: 'approved',
+      stockQuantity: 14,
+      attributes: {
+        Capacity: '260 Litres Double Door',
+        Compressor: 'Smart Inverter 10-Yr Warranty',
+        Cooling: 'Multi Air Flow No Frost',
+        Power: 'A+ Energy Efficiency',
+      },
+      speedOptions: [
+        { size: 10, cycleDays: 10, dailyAmount: 385, totalAmount: 38500, description: '10 members · KSh 385 daily · 1 fridge every 10 days' },
+        { size: 6, cycleDays: 10, dailyAmount: 642, totalAmount: 38500, description: '6 members · KSh 642 daily · 60-day cycle' },
+        { size: 4, cycleDays: 10, dailyAmount: 963, totalAmount: 38500, description: '4 members · KSh 963 daily · 40-day cycle' },
+        { size: 2, cycleDays: 10, dailyAmount: 1925, totalAmount: 38500, description: '2 members · KSh 1,925 daily · 20-day cycle' },
+      ],
+      createdAt: now - 4 * dayMs, // Posted 4 days ago
+      updatedAt: now - 4 * dayMs,
+    },
+    {
+      id: 6,
+      title: 'Orthopedic High-Density Quilted Mattress 6x6 (10-Inch)',
+      description: 'Pocket spring core with high-density pressure-relief memory foam topper, anti-allergy knitted bamboo jacquard cover, and reinforced edge perimeter for spinal alignment.',
+      category: 'Bedding',
+      price: 22000,
+      wasPrice: 26000,
+      discountPercent: 15,
+      images: ['./images/cookware_set.jpg'],
+      vendorId: 16,
+      vendorName: 'Eldoret Fresh Bedding & Decor',
+      isFeatured: true,
+      live: true,
+      moderationStatus: 'approved',
+      stockQuantity: 18,
+      attributes: {
+        Size: '6x6 King Size 10-Inch',
+        Core: 'Independent Pocket Springs',
+        Cover: 'Breathable Bamboo Jacquard',
+        Warranty: '5 Years Manufacturer',
+      },
+      speedOptions: [
+        { size: 10, cycleDays: 10, dailyAmount: 220, totalAmount: 22000, description: '10 members · KSh 220 daily · 1 mattress every 10 days' },
+        { size: 6, cycleDays: 10, dailyAmount: 367, totalAmount: 22000, description: '6 members · KSh 367 daily · 60 days total' },
+        { size: 4, cycleDays: 10, dailyAmount: 550, totalAmount: 22000, description: '4 members · KSh 550 daily · 40 days total' },
+        { size: 2, cycleDays: 10, dailyAmount: 1100, totalAmount: 22000, description: '2 members · KSh 1,100 daily · 20 days duo' },
+      ],
+      createdAt: now - 5 * dayMs, // Posted 5 days ago
+      updatedAt: now - 5 * dayMs,
+    },
+    {
+      id: 7,
+      title: 'Commercial Heavy Duty Blender & Food Processor (2.5L / 1800W)',
+      description: 'Industrial high-torque copper motor with Japanese 6-blade hardened stainless steel blades. Crushes ice in 5 seconds and grinds dry spices, grains, smoothies, and nut butters effortlessly.',
+      category: 'Kitchen',
+      price: 7800,
+      wasPrice: 9500,
+      discountPercent: 18,
+      images: ['./images/cookware_set.jpg'],
+      vendorId: 14,
+      vendorName: 'Savanna Tech & Solar Solutions',
+      isFeatured: false,
+      live: true,
+      moderationStatus: 'approved',
+      stockQuantity: 30,
+      attributes: {
+        Power: '1800W Pure Copper Motor',
+        Capacity: '2.5L BPA-Free Pitcher',
+        Speed: 'Variable Speed + Pulse Switch',
+        Blades: 'Japanese 6-Leaf Stainless',
+      },
+      speedOptions: [
+        { size: 10, cycleDays: 10, dailyAmount: 78, totalAmount: 7800, description: '10 members · KSh 78 daily · 1 blender every 10 days' },
+        { size: 6, cycleDays: 10, dailyAmount: 130, totalAmount: 7800, description: '6 members · KSh 130 daily · 60 days total' },
+        { size: 4, cycleDays: 10, dailyAmount: 195, totalAmount: 7800, description: '4 members · KSh 195 daily · 40 days total' },
+        { size: 2, cycleDays: 10, dailyAmount: 390, totalAmount: 7800, description: '2 members · KSh 390 daily · 20 days duo' },
+      ],
+      createdAt: now - 6 * dayMs, // Posted 6 days ago
+      updatedAt: now - 6 * dayMs,
+    },
+    {
+      id: 8,
+      title: 'Smart Security Solar CCTV Dual Camera with 4G SIM & Night Vision',
+      description: '100% wire-free outdoor security with built-in solar panel, 4G LTE SIM cellular connectivity, 360° pan/tilt tracking, PIR human detection, two-way audio intercom, and color night vision.',
+      category: 'Phones, Tablets & TV',
+      price: 12500,
+      wasPrice: 15000,
+      discountPercent: 17,
+      images: ['./images/smart_tv.jpg'],
+      vendorId: 11,
+      vendorName: 'Apex Electronics Kenya',
+      isFeatured: true,
+      live: true,
+      moderationStatus: 'approved',
+      stockQuantity: 25,
+      attributes: {
+        Connectivity: '4G LTE SIM (No Wi-Fi needed)',
+        Solar: '8W High Efficiency Panel',
+        Battery: '15,000mAh Rechargeable',
+        Resolution: '2K 3MP Dual Lens Color Night',
+      },
+      speedOptions: [
+        { size: 10, cycleDays: 10, dailyAmount: 125, totalAmount: 12500, description: '10 members · KSh 125 daily · 1 camera every 10 days' },
+        { size: 6, cycleDays: 10, dailyAmount: 209, totalAmount: 12500, description: '6 members · KSh 209 daily · 60 days total' },
+        { size: 4, cycleDays: 10, dailyAmount: 313, totalAmount: 12500, description: '4 members · KSh 313 daily · 40 days total' },
+        { size: 2, cycleDays: 10, dailyAmount: 625, totalAmount: 12500, description: '2 members · KSh 625 daily · 20 days duo' },
+      ],
+      createdAt: now - 7 * dayMs, // Posted 7 days ago (on the 7-day boundary)
+      updatedAt: now - 7 * dayMs,
     },
   ];
 
@@ -381,9 +606,11 @@ function getInitialDatabase(): DatabaseSchema {
       defaultRecord: 1,
       refundRequest: 1,
       payment: 10,
+      peerLoan: 1,
       ledger: 1,
       audit: 10,
     },
+    peerLoans: [],
   };
 }
 
@@ -394,6 +621,8 @@ export async function getDatabase(): Promise<DatabaseSchema> {
     await fs.mkdir(DATA_DIR, { recursive: true });
     const raw = await fs.readFile(DB_FILE, 'utf-8');
     dbCache = JSON.parse(raw);
+    if (!dbCache!.peerLoans) dbCache!.peerLoans = [];
+    if (!dbCache!.nextIds.peerLoan) dbCache!.nextIds.peerLoan = 1;
     return dbCache!;
   } catch {
     const initial = getInitialDatabase();

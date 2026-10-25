@@ -2,9 +2,9 @@
   "users": [
     {
       "id": 1,
-      "name": "Alibaird System Admin",
+      "name": "Buyoll System Admin",
       "phone": "0700000000",
-      "email": "admin@alibaird.com",
+      "email": "admin@buyoll.com",
       "role": "admin",
       "credit": 0,
       "coins": 200,
@@ -14,11 +14,11 @@
     },
     {
       "id": 2,
-      "name": "Alibaird Direct Electronics & Home",
+      "name": "Buyoll Direct Electronics & Home",
       "phone": "0722000000",
-      "email": "direct@alibaird.com",
+      "email": "direct@buyoll.com",
       "role": "merchant",
-      "shopName": "Alibaird Direct Official",
+      "shopName": "Buyoll Direct Official",
       "shopDescription": "Official verified distributor of solar generators, appliances & smart electronics.",
       "verified": true,
       "credit": 0,
@@ -63,7 +63,7 @@
         "/src/assets/images/solar_power_backup_station_1792852473757.jpg"
       ],
       "vendorId": 2,
-      "vendorName": "Alibaird Direct Official",
+      "vendorName": "Buyoll Direct Official",
       "isFeatured": true,
       "live": true,
       "moderationStatus": "approved",
@@ -119,7 +119,7 @@
         "/src/assets/images/stainless_cookware_set_1792852473733.jpg"
       ],
       "vendorId": 2,
-      "vendorName": "Alibaird Direct Official",
+      "vendorName": "Buyoll Direct Official",
       "isFeatured": true,
       "live": true,
       "moderationStatus": "approved",
@@ -175,7 +175,7 @@
         "/src/assets/images/smart_uhd_television_1792852474781.jpg"
       ],
       "vendorId": 2,
-      "vendorName": "Alibaird Direct Official",
+      "vendorName": "Buyoll Direct Official",
       "isFeatured": true,
       "live": true,
       "moderationStatus": "approved",
@@ -231,7 +231,7 @@
         "/src/assets/images/executive_ergonomic_chair_1792852475009.jpg"
       ],
       "vendorId": 2,
-      "vendorName": "Alibaird Direct Official",
+      "vendorName": "Buyoll Direct Official",
       "isFeatured": false,
       "live": true,
       "moderationStatus": "approved",
@@ -398,7 +398,7 @@
         {
           "slotNumber": 2,
           "userId": 1,
-          "userName": "Alibaird System Admin",
+          "userName": "Buyoll System Admin",
           "userPhone": "0700000000",
           "status": "active",
           "inviteCode": "N7SG96",
@@ -519,9 +519,9 @@
         {
           "id": "chat_1792853160087",
           "senderId": 1,
-          "senderName": "Alibaird System Admin",
+          "senderName": "Buyoll System Admin",
           "kind": "system",
-          "text": "Alibaird System Admin joined as Member #2!",
+          "text": "Buyoll System Admin joined as Member #2!",
           "timestamp": 1792853160087
         }
       ],
@@ -597,7 +597,7 @@
       "id": 15,
       "timestamp": 1792853160087,
       "actorId": 1,
-      "actorName": "Alibaird System Admin",
+      "actorName": "Buyoll System Admin",
       "action": "MEMBER_JOINED",
       "details": "Joined Chama #101 as Member #2"
     },
@@ -629,7 +629,7 @@
       "id": 11,
       "timestamp": 1792853117377,
       "actorId": 2,
-      "actorName": "Alibaird Direct Electronics & Home",
+      "actorName": "Buyoll Direct Electronics & Home",
       "action": "PRODUCT_UPDATED",
       "details": "Updated product #2 \"Culinary Pro 10-Piece Stainless Steel Tri-Ply Cookware Set (Induction Ready)\""
     },

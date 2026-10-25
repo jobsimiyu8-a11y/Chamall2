@@ -26,6 +26,16 @@ export const VendorProductEditorModal: React.FC<VendorProductEditorModalProps> =
   const [discountPercent, setDiscountPercent] = useState<number | undefined>(product?.discountPercent);
   const [stockQuantity, setStockQuantity] = useState<number>(product?.stockQuantity || 10);
   const [imageUrl, setImageUrl] = useState(product?.images?.[0] || '');
+  const [isFeatured, setIsFeatured] = useState<boolean>(product?.isFeatured || false);
+
+  // Specifications / attributes editor
+  const initialAttrs = product?.attributes
+    ? Object.entries(product.attributes).map(([key, value]) => ({ key, value: String(value) }))
+    : [
+        { key: 'Warranty', value: '2 Years Official Warranty' },
+        { key: 'Authenticity', value: '100% Genuine Guaranteed' },
+      ];
+  const [attributesList, setAttributesList] = useState<Array<{ key: string; value: string }>>(initialAttrs);
 
   // Speed options editor
   const [speedOptions, setSpeedOptions] = useState<SpeedOption[]>(
@@ -38,6 +48,23 @@ export const VendorProductEditorModal: React.FC<VendorProductEditorModalProps> =
   );
 
   const [saving, setSaving] = useState(false);
+
+  // Attributes helpers
+  function addAttribute() {
+    setAttributesList(prev => [...prev, { key: '', value: '' }]);
+  }
+
+  function updateAttribute(idx: number, field: 'key' | 'value', val: string) {
+    setAttributesList(prev => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: val };
+      return copy;
+    });
+  }
+
+  function removeAttribute(idx: number) {
+    setAttributesList(prev => prev.filter((_, i) => i !== idx));
+  }
 
   // Recalculate daily rates when total price changes
   function handlePriceChange(newPrice: number) {
@@ -94,6 +121,13 @@ export const VendorProductEditorModal: React.FC<VendorProductEditorModalProps> =
 
     setSaving(true);
     try {
+      const attributesObj = attributesList.reduce((acc, curr) => {
+        if (curr.key.trim()) {
+          acc[curr.key.trim()] = curr.value.trim();
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
       const payload: Partial<Product> = {
         title: title.trim(),
         description: description.trim(),
@@ -103,6 +137,8 @@ export const VendorProductEditorModal: React.FC<VendorProductEditorModalProps> =
         discountPercent: discountPercent ? Number(discountPercent) : undefined,
         stockQuantity,
         images: imageUrl.trim() ? [imageUrl.trim()] : ['/src/assets/images/stainless_cookware_set_1792852473733.jpg'],
+        attributes: attributesObj,
+        isFeatured,
         speedOptions,
       };
 
@@ -267,6 +303,76 @@ export const VendorProductEditorModal: React.FC<VendorProductEditorModalProps> =
               placeholder="Detailed technical specifications, materials, warranty, and package contents..."
               className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0E5A3C] focus:outline-none"
             />
+          </div>
+
+          {/* KEY FEATURES & ATTRIBUTES SPECIFICATIONS */}
+          <div className="border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Product Features & Specifications
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Add technical specs (e.g. Battery, Capacity, Warranty, Material). All items are editable.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addAttribute}
+                className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Specification</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {attributesList.map((attr, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={attr.key}
+                    onChange={(e) => updateAttribute(idx, 'key', e.target.value)}
+                    placeholder="Feature (e.g. Warranty)"
+                    className="w-1/3 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0E5A3C] focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={attr.value}
+                    onChange={(e) => updateAttribute(idx, 'value', e.target.value)}
+                    placeholder="Value (e.g. 2 Years Replacement)"
+                    className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0E5A3C] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeAttribute(idx)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 rounded"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FEATURED ANNOUNCEMENT OPTION (KSh 500 Placement) */}
+          <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+                className="mt-0.5 rounded text-[#0E5A3C] focus:ring-[#0E5A3C]"
+              />
+              <div>
+                <span className="text-xs font-bold text-slate-900 block">
+                  Place in Hero Featured Deals Carousel (KSh 500 / image placement)
+                </span>
+                <span className="text-[11px] text-slate-600 leading-relaxed block mt-0.5">
+                  Featured products rotate automatically right-to-left at 2.5s intervals on the main hero banner for maximum buyer visibility across over 100,000 deals.
+                </span>
+              </div>
+            </label>
           </div>
 
           {/* PART 6: SPEED OPTIONS CONFIGURATION */}

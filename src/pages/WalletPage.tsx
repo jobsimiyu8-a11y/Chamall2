@@ -12,6 +12,10 @@ import {
   AlertCircle,
   CreditCard,
   History,
+  FileText,
+  Printer,
+  Download,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface WalletPageProps {
@@ -43,6 +47,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({
   // Default resolution modal
   const [selectedDefault, setSelectedDefault] = useState<DefaultRecord | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [showStatementModal, setShowStatementModal] = useState(false);
 
   useEffect(() => {
     loadWalletData();
@@ -337,12 +342,27 @@ export const WalletPage: React.FC<WalletPageProps> = ({
 
         {/* RIGHT: Transaction Statements & Ledger (~65%) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* M-Pesa Statements */}
+          {/* M-Pesa Statements & Customer Ledger */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <History className="w-4 h-4 text-slate-500" />
-              <span>M-Pesa Till Statement</span>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <History className="w-4 h-4 text-[#0E5A3C]" />
+                  <span>M-Pesa Till Customer Statement & Ledger</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Verified payments to Buyoll Till <b>000000</b> with real-time audit ledger.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowStatementModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0E5A3C] hover:bg-[#0b4830] text-white text-xs font-bold rounded-lg transition-colors shadow-xs shrink-0"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>View & Print Statement</span>
+              </button>
+            </div>
 
             {payments.length === 0 ? (
               <p className="text-xs text-slate-400 py-4 text-center">No payment transactions recorded yet.</p>
@@ -515,6 +535,158 @@ export const WalletPage: React.FC<WalletPageProps> = ({
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OFFICIAL CUSTOMER STATEMENT & LEDGER MODAL */}
+      {showStatementModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl my-8 border border-slate-200">
+            {/* Modal Header & Actions */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-200 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#0E5A3C] text-white flex items-center justify-center font-black text-base shadow-sm">
+                  B
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                    BUYOLL FINANCIAL STATEMENT
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Official Escrow Customer Ledger · M-Pesa Till <b>000000</b>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / PDF</span>
+                </button>
+                <button
+                  onClick={() => setShowStatementModal(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Account Details Header */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200/80 mb-6 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[11px]">Account Name</span>
+                <span className="font-bold text-slate-900">{currentUser.name}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Mobile Number</span>
+                <span className="font-bold text-slate-900">{currentUser.phone}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Customer ID</span>
+                <span className="font-mono font-bold text-slate-900">
+                  BYL-{currentUser.id.toString().padStart(6, '0')}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Escrow Till</span>
+                <span className="font-bold text-[#0E5A3C]">000000 (Buyoll)</span>
+              </div>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                <span className="text-[11px] font-semibold text-emerald-800 block">Total Approved</span>
+                <span className="text-base font-black text-[#0E5A3C] tabular-nums">
+                  KSh{' '}
+                  {payments
+                    .filter(p => p.status === 'approved')
+                    .reduce((sum, p) => sum + p.amount, 0)
+                    .toLocaleString()}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                <span className="text-[11px] font-semibold text-slate-600 block">Store Credit</span>
+                <span className="text-base font-black text-slate-900 tabular-nums">
+                  KSh {(currentUser.credit || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-center">
+                <span className="text-[11px] font-semibold text-amber-800 block">Reward Points</span>
+                <span className="text-base font-black text-amber-900 tabular-nums">
+                  {(currentUser.points || 0).toLocaleString()} pts
+                </span>
+              </div>
+            </div>
+
+            {/* Itemized Transactions Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden mb-6">
+              <div className="bg-slate-100 px-4 py-2 text-xs font-bold text-slate-800 border-b border-slate-200">
+                Itemized Transaction History
+              </div>
+              {payments.length === 0 ? (
+                <p className="text-xs text-slate-400 p-6 text-center">No transactions on record.</p>
+              ) : (
+                <div className="max-h-60 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0">
+                      <tr>
+                        <th className="py-2 px-3">Date</th>
+                        <th className="py-2 px-3">Type</th>
+                        <th className="py-2 px-3">M-Pesa Code</th>
+                        <th className="py-2 px-3">Amount</th>
+                        <th className="py-2 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {payments.map(p => (
+                        <tr key={p.id}>
+                          <td className="py-2 px-3 text-slate-500">
+                            {new Date(p.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 px-3 capitalize text-slate-700">
+                            {p.type.replace('_', ' ')}
+                          </td>
+                          <td className="py-2 px-3 font-mono font-bold text-slate-900">
+                            {p.code}
+                          </td>
+                          <td className="py-2 px-3 font-bold text-slate-900 tabular-nums">
+                            KSh {p.amount.toLocaleString()}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                p.status === 'approved'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : p.status === 'rejected'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {p.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Verification Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 pt-4 border-t border-slate-100 gap-2">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Verified Buyoll Social Fintech Escrow Statement</span>
+              </span>
+              <span>Generated on {new Date().toLocaleString()}</span>
             </div>
           </div>
         </div>

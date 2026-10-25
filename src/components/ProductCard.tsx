@@ -1,5 +1,6 @@
 import React from 'react';
 import { Product } from '../types.ts';
+import { resolveImageUrl } from '../api.ts';
 import { Users, CheckCircle2 } from 'lucide-react';
 
 interface ProductCardProps {
@@ -18,7 +19,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     ? Math.min(...product.speedOptions.map(s => s.dailyAmount))
     : Math.ceil(product.price / 10 / 10);
 
-  const mainImage = product.images?.[0] || '/src/assets/images/stainless_cookware_set_1792852473733.jpg';
+  const mainImage = resolveImageUrl(product.images?.[0]);
 
   return (
     <article

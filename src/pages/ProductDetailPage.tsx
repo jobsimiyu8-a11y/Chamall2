@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, ChamaGroup, SpeedOption, User } from '../types.ts';
-import { api } from '../api.ts';
+import { api, resolveImageUrl } from '../api.ts';
 import {
   ShieldCheck,
   Truck,
@@ -14,7 +14,11 @@ import {
   Info,
   Calendar,
   AlertCircle,
+  Store,
+  Tag,
+  Edit3,
 } from 'lucide-react';
+import { VendorProductEditorModal } from './VendorProductEditorModal.tsx';
 
 interface ProductDetailPageProps {
   productId: number;
@@ -33,8 +37,10 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [groups, setGroups] = useState<ChamaGroup[]>([]);
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingProduct, setIsEditingProduct] = useState(false);
 
   // Gallery state
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -57,9 +63,21 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getProduct(productId);
+      const [data, prodsRes] = await Promise.all([
+        api.getProduct(productId),
+        api.getProducts(),
+      ]);
       setProduct(data.product);
       setGroups(data.groups || []);
+
+      // Recommend products from OTHER merchants (at least 5 items)
+      const otherMerchants = prodsRes.products.filter(
+        (p: Product) => p.id !== data.product.id && p.vendorId !== data.product.vendorId
+      );
+      const displayRecs = otherMerchants.length >= 5
+        ? otherMerchants
+        : prodsRes.products.filter((p: Product) => p.id !== data.product.id);
+      setRecommendedProducts(displayRecs);
     } catch (err: any) {
       setError(err.message || 'Failed to load product details.');
     } finally {
@@ -145,10 +163,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     );
   }
 
-  const images = product.images && product.images.length > 0
+  const rawImages = product.images && product.images.length > 0
     ? product.images
-    : ['/src/assets/images/stainless_cookware_set_1792852473733.jpg'];
+    : ['./images/cookware_set.jpg'];
 
+  const images = rawImages.map(img => resolveImageUrl(img));
   const currentImage = images[selectedImageIndex] || images[0];
 
   // Selected speed details
@@ -254,14 +273,26 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
             {/* Seller info */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
-              <span>Sold by</span>
-              <span className="font-semibold text-slate-900 flex items-center gap-1">
-                {product.vendorName}
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              </span>
-              <span aria-hidden="true">·</span>
-              <span className="text-emerald-700 font-medium">In Stock ({product.stockQuantity} available)</span>
+            <div className="flex items-center justify-between gap-1.5 text-xs text-slate-500 mb-2">
+              <div className="flex items-center gap-1.5 truncate">
+                <span>Sold by</span>
+                <span className="font-semibold text-slate-900 flex items-center gap-1">
+                  {product.vendorName}
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                </span>
+                <span aria-hidden="true">·</span>
+                <span className="text-emerald-700 font-medium whitespace-nowrap">In Stock ({product.stockQuantity} available)</span>
+              </div>
+
+              {currentUser && (currentUser.id === product.vendorId || currentUser.role === 'admin') && (
+                <button
+                  onClick={() => setIsEditingProduct(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-lg transition-colors shrink-0 border border-amber-200"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Listing & Features</span>
+                </button>
+              )}
             </div>
 
             {/* Title */}
@@ -285,7 +316,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Or pay flexibly in small daily increments with an Alibaird Chama group below.
+                Or pay flexibly in small daily installments with a Buyoll Chama group below.
               </p>
             </div>
 
@@ -423,7 +454,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
             {/* Official till & escrow guarantee */}
             <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>ChaMall M-Pesa Till: <b>000000</b></span>
+              <span>Buyoll M-Pesa Till: <b>000000</b></span>
               <span>100% Escrow Protected</span>
             </div>
           </div>
@@ -574,6 +605,119 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
         )}
       </section>
+
+      {/* RECOMMENDED FROM OTHER SHOPS & MERCHANTS (At least 5 recommendations) */}
+      <section className="border-t border-slate-200 pt-12 mt-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="p-1.5 bg-emerald-100 text-[#0E5A3C] rounded-lg">
+                <Store className="w-4 h-4" />
+              </span>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                Recommended from Other Shops & Merchants
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500">
+              Explore alternative verified items from independent partner merchants across Kenya.
+            </p>
+          </div>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full shrink-0">
+            {recommendedProducts.length} Alternate Shops
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {recommendedProducts.slice(0, 10).map((rec) => {
+            const minDaily = rec.speedOptions && rec.speedOptions.length > 0
+              ? Math.min(...rec.speedOptions.map(s => s.dailyAmount))
+              : Math.ceil(rec.price / 10 / 10);
+
+            return (
+              <div
+                key={rec.id}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  onNavigate('product', rec.id);
+                }}
+                className="group flex flex-col justify-between bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-[#0E5A3C] hover:shadow-md transition-all cursor-pointer p-3"
+              >
+                <div>
+                  {/* Image */}
+                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-100 mb-2.5">
+                    <img
+                      src={resolveImageUrl(rec.images[0])}
+                      alt={rec.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {rec.discountPercent && rec.discountPercent > 0 && (
+                      <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#FF6A00] text-white text-[10px] font-black rounded">
+                        -{rec.discountPercent}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Merchant badge */}
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-1 truncate">
+                    <Store className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span className="truncate font-medium text-slate-600">{rec.vendorName}</span>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                  </div>
+
+                  {/* Title */}
+                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug mb-2 group-hover:text-[#0E5A3C] transition-colors">
+                    {rec.title}
+                  </h4>
+
+                  {/* Price */}
+                  <div className="flex items-baseline gap-1.5 mb-1">
+                    <span className="text-sm font-extrabold text-slate-900 tabular-nums">
+                      KSh {rec.price.toLocaleString()}
+                    </span>
+                    {rec.wasPrice && rec.wasPrice > rec.price && (
+                      <span className="text-[10px] text-slate-400 line-through tabular-nums">
+                        KSh {rec.wasPrice.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-[#0E5A3C] font-semibold mb-3">
+                    From KSh {minDaily.toLocaleString()} / day
+                  </div>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    onNavigate('product', rec.id);
+                  }}
+                  className="w-full py-1.5 bg-slate-100 group-hover:bg-[#0E5A3C] text-slate-700 group-hover:text-white text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
+                >
+                  <span>Check Shop</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Merchant Product Feature Editor Modal */}
+      {isEditingProduct && product && (
+        <VendorProductEditorModal
+          product={product}
+          onClose={() => setIsEditingProduct(false)}
+          onSaved={(updated) => {
+            setProduct(updated);
+            setIsEditingProduct(false);
+            loadProductDetails();
+          }}
+          onNotify={onNotify}
+        />
+      )}
     </div>
   );
 };
+
